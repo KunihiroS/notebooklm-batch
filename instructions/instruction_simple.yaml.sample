@@ -1,0 +1,38 @@
+# NotebookLM batch instruction sample
+# Minimum working example.
+# Supported types: podcast, image, slide, video, quiz, flashcards, report, data-table
+#
+# Supported options by type:
+# - podcast: format=deep-dive|brief|critique|debate, length=short|default|long
+# - image: orientation=landscape|portrait|square, detail=concise|standard|detailed
+# - slide: format=detailed|presenter, length=default|short
+# - video: format=explainer|brief, style=auto-select|classic|whiteboard|kawaii|anime|watercolor|retro-print|heritage|paper-craft
+# - report: format=briefing-doc|faq|study-guide|timeline|...
+# - quiz: quantity=standard|more|fewer, difficulty=easy|medium|hard
+# - flashcards: quantity=standard|more|fewer, difficulty=easy|medium|hard
+# - data-table: (no options, prompt required)
+#
+# Full structure example:
+# settings:
+#   language: ja
+#   notify:
+#     github_issue: 1
+#     # github_repo: "your-account/notebooklm-batch"
+#
+# tasks:
+#   - source: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+#     title: "Example Notebook Title"
+#     contents:
+#       - type: podcast
+#         prompt: "日本語でわかりやすく要約してください。"
+#         options:
+#           format: deep-dive
+#           length: default
+#
+# The following is the minimum working example.
+
+tasks:
+  - source: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+    contents:
+      - type: podcast
+        prompt: "日本語でわかりやすく要約してください。"

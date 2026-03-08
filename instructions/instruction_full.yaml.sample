@@ -1,0 +1,82 @@
+# NotebookLM batch instruction sample
+# Full sample covering all supported content types and option fields.
+# Save as .yaml/.yml under instructions/ and pass it to run_batch.py.
+
+settings:
+  language: ja
+  notify:
+    github_issue: 1
+    # github_repo: "your-account/notebooklm-batch"
+
+tasks:
+  - source: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+    title: "AI News Weekly"
+    contents:
+      - type: podcast
+        prompt: "日本語で、前半は全体像、後半は論点ごとの深掘りという構成で、親しみやすいトーンのポッドキャストにしてください。"
+        options:
+          format: deep-dive
+          length: long
+        # format: deep-dive | brief | critique | debate
+        # length: short | default | long
+
+      - type: image
+        prompt: "動画の内容を一枚で理解できるインフォグラフィックを作成してください。主要トピック3点を視覚的に整理し、本文は日本語で簡潔にしてください。"
+        options:
+          orientation: landscape
+          detail: detailed
+        # orientation: landscape | portrait | square
+        # detail: concise | standard | detailed
+
+      - type: slide
+        prompt: "社内共有向けのスライド資料として、要点と示唆が一目でわかる構成にしてください。"
+        options:
+          format: presenter
+          length: default
+        # format: detailed | presenter
+        # length: default | short
+
+      - type: video
+        prompt: "初心者向けの解説動画として、専門用語には短い補足を入れながらわかりやすく構成してください。"
+        options:
+          format: explainer
+          style: whiteboard
+        # format: explainer | brief
+        # style: auto-select | classic | whiteboard | kawaii | anime | watercolor | retro-print | heritage | paper-craft
+
+      - type: report
+        prompt: "動画の要点を日本語でブリーフィングドキュメントとしてまとめてください。"
+        options:
+          format: briefing-doc
+        # format: briefing-doc | faq | study-guide | timeline | ...
+
+      - type: quiz
+        prompt: "動画の重要概念を確認するクイズを日本語で作成してください。"
+        options:
+          quantity: standard
+          difficulty: medium
+        # quantity: standard | more | fewer
+        # difficulty: easy | medium | hard
+
+      - type: flashcards
+        prompt: "動画の重要用語と概念をフラッシュカード化してください。"
+        options:
+          quantity: standard
+          difficulty: medium
+
+      - type: data-table
+        prompt: "動画で言及された製品・サービス・数値を一覧表にまとめてください。"
+
+  - source: "https://example.com/article"
+    title: "Web記事まとめ"
+    contents:
+      - type: report
+        prompt: "記事の要点を日本語でまとめてください。"
+        options:
+          format: briefing-doc
+
+      - type: podcast
+        prompt: "批評的な観点を含めて、日本語で短めに要約してください。"
+        options:
+          format: critique
+          length: short
