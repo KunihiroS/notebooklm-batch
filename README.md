@@ -6,6 +6,36 @@ A batch content generation tool that uses NotebookLM to automatically create pod
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
+## TL;DR
+
+### What it does
+Batch-generates content from YouTube videos, web pages, and other sources using NotebookLM. Write a YAML instruction file, run it, and walk away.
+
+### How it works
+- Automatically creates a notebook per source → generates content → downloads → deletes the notebook
+  - NotebookLM is used as a generation engine; no notebooks are left behind on the service
+- **Output files are the source of truth**: if a file exists locally, it is skipped (supports rerun and resume)
+- **Auto-resume**: re-running the same YAML resumes from where it left off
+- **Idempotent**: same source → same output directory and filename (stable hashing)
+
+### Recommended use cases
+- Batch-convert multiple YouTube videos into podcasts, slides, or reports
+- Bulk-process news articles or tech blogs into reports or flashcards
+- "Fire and forget" with background execution + GitHub Issue notifications
+
+### Supported IN / OUT
+
+| IN (source) | OUT (content) |
+|-------------|---------------|
+| YouTube URL | Podcast (MP3) |
+| Website URL | Infographic (PNG) |
+| Text file | Slide Deck (PDF) |
+| Inline text | Video (MP4) |
+| | Quiz (JSON) |
+| | Flashcards (JSON) |
+| | Report (Markdown) |
+| | Data Table (CSV) |
+
 ---
 
 ## Requirements
@@ -82,38 +112,6 @@ Generated files are saved to `./files/<title>__<hash>/`.
 ## Contributing
 
 Contributions are welcome. Please open an issue or pull request on [GitHub](https://github.com/KunihiroS/notebooklm-batch).
-
----
-
-## TL;DR
-
-### What it does
-Batch-generates content from YouTube videos, web pages, and other sources using NotebookLM. Write a YAML instruction file, run it, and walk away.
-
-### How it works
-- Automatically creates a notebook per source → generates content → downloads → deletes the notebook
-  - NotebookLM is used as a generation engine; no notebooks are left behind on the service
-- **Output files are the source of truth**: if a file exists locally, it is skipped (supports rerun and resume)
-- **Auto-resume**: re-running the same YAML resumes from where it left off
-- **Idempotent**: same source → same output directory and filename (stable hashing)
-
-### Recommended use cases
-- Batch-convert multiple YouTube videos into podcasts, slides, or reports
-- Bulk-process news articles or tech blogs into reports or flashcards
-- "Fire and forget" with background execution + GitHub Issue notifications
-
-### Supported IN / OUT
-
-| IN (source) | OUT (content) |
-|-------------|---------------|
-| YouTube URL | Podcast (MP3) |
-| Website URL | Infographic (PNG) |
-| Text file | Slide Deck (PDF) |
-| Inline text | Video (MP4) |
-| | Quiz (JSON) |
-| | Flashcards (JSON) |
-| | Report (Markdown) |
-| | Data Table (CSV) |
 
 ---
 
