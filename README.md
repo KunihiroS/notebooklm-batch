@@ -18,6 +18,15 @@ Batch-generates content from YouTube videos, web pages, and other sources using 
 - **Auto-resume**: re-running the same YAML resumes from where it left off
 - **Idempotent**: same source → same output directory and filename (stable hashing)
 
+### Let the AI do it all (Claude Code Skill)
+
+The `.claude/skills/notebooklm-batch/` directory includes a **Claude Code Skill**.
+With [Claude Code](https://claude.ai/code), you can skip writing YAML entirely — just say what you want:
+
+> "Make a podcast from this YouTube video: https://..."
+
+Claude will handle YAML creation, dry-run verification, and background execution automatically.
+
 ### Recommended use cases
 - Batch-convert multiple YouTube videos into podcasts, slides, or reports
 - Bulk-process news articles or tech blogs into reports or flashcards
