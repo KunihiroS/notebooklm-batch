@@ -1,6 +1,6 @@
 # NotebookLM Batch
 
-![notebooklm-batch overview](assets/Gemini_Generated_Image_dvdka6dvdka6dvdk.png)
+![notebooklm-batch overview](assets/Gemini_Generated_Image_vsfydjvsfydjvsfy.png)
 
 A batch content generation tool that uses NotebookLM to automatically create podcasts, slides, reports, quizzes, and more from YouTube videos and website URLs.
 
