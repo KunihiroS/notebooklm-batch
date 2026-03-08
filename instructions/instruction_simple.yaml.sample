@@ -14,7 +14,7 @@
 #
 # Full structure example:
 # settings:
-#   language: ja
+#   language: en
 #   notify:
 #     github_issue: 1
 #     # github_repo: "your-account/notebooklm-batch"
@@ -24,7 +24,7 @@
 #     title: "Example Notebook Title"
 #     contents:
 #       - type: podcast
-#         prompt: "日本語でわかりやすく要約してください。"
+#         prompt: "Summarize the video in a clear and engaging way."
 #         options:
 #           format: deep-dive
 #           length: default
@@ -35,4 +35,4 @@ tasks:
   - source: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
     contents:
       - type: podcast
-        prompt: "日本語でわかりやすく要約してください。"
+        prompt: "Summarize the video in a clear and engaging way."

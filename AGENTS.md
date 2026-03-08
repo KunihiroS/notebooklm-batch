@@ -1,116 +1,113 @@
-# NotebookLM コンテンツ生成エージェント指示書
+# NotebookLM Content Generation Agent Guide
 
-このディレクトリでは、NotebookLMを使用してYouTube動画からコンテンツ（Podcast、画像、スライド、動画）を生成します。
-README.md に記載の「指示書（YAML）→ バッチ生成 → ローカル保存」の運用を前提とします。
+This repository uses NotebookLM to generate content (podcasts, images, slides, videos, etc.) from YouTube videos, website URLs, and other sources. Operations follow the "YAML instruction → batch generation → local save" workflow described in README.md.
 
-## 前提条件
+## Prerequisites
 
-- `notebooklm-py` が `pipx install "notebooklm-py[browser]"` でインストール済み
-- `notebooklm login` で認証済み（`~/.notebooklm/storage_state.json` が存在）
-- ログインが未実行、もしくは期限切れの場合、`notebooklm login` を実行し、ユーザーにブラウザ操作を依頼してログインを完了させる。
-  - ユーザの操作はブラウザ上での認証手続きとloginコマンドを実行したターミナルのCLI操作。
-  - もし `notebooklm login` 実行後、**ターミナルでENTERして保存が完了する前にブラウザを閉じると失敗する**ため、ユーザーには「ログインが終わったらターミナルに戻ってENTERを押すまでブラウザを閉じない」ことを伝える。
+- `notebooklm-py` installed via `pipx install "notebooklm-py[browser]"`
+- Authenticated via `notebooklm login` (`~/.notebooklm/storage_state.json` exists)
+- If not authenticated or session expired, run `notebooklm login` and ask the user to complete browser-based Google login.
+  - The user must complete login in the browser **and then press ENTER in the terminal** — closing the browser before pressing ENTER causes `storage_state.json` to fail to save.
 
-### 認証が期限切れしていた場合（環境をクリーンに保つ）
+### Re-authentication (keeping the environment clean)
 
-- 依存ツールは `pipx` で入れる（グローバルに `pip` で入れない）
-- Playwright の Chromium を `pipx run` で導入する（pipx venv を汚さない）
+Install dependencies via `pipx` (not global `pip`):
 
 ```bash
 pipx install "notebooklm-py[browser]"
 pipx run --spec "notebooklm-py[browser]" python -m playwright install chromium
 ```
 
-## 目的と管理対象
+## Scope
 
-- 指示書: `./instructions/` 配下の YAML
-- 生成物: `./files/` 配下（`{safe_title}__{source_hash}` 形式のサブディレクトリ）
-- 実行ログ: `./log/` 配下
+- Instructions: YAML files under `./instructions/`
+- Outputs: Files under `./files/` (`{safe_title}__{source_hash}` subdirectories)
+- Run logs: Files under `./log/`
 
-## バッチ実行の基本
+## Batch Execution
 
-### Step 1: ユーザーからの入力を受け取る
+### Step 1: Gather input from the user
 
-ユーザーは、`./instructions/` に指定フォーマットでYAML指示書を配置し、実行を依頼する。
+The user places a YAML instruction file under `./instructions/` and requests execution.
 
-**重要**: 
-- 指示書（YAML）の仕様、出力規約、選べるオプション一覧は README.md を正とする。
-- ユーザーが指示書の作成自体をAIに指示する場合は、以下を確認し指示書を作成する。
+**Important**:
+- The authoritative YAML schema, output conventions, and option values are in README.md.
+- If the user asks the agent to create the instruction file, confirm the following:
 
-#### 指示書作成時の確認事項
+#### Items to confirm when creating an instruction file
 
-| 項目 | 必須 | 説明 | 例 |
-|------|------|------|------|
-| **ソース** | ✅ | 処理対象（YouTube URL / Website URL / ファイルパス等、複数可） | `https://www.youtube.com/watch?v=XXXXX` |
-| **タイトル** | ✅ | NotebookLM上の名前 & 出力ディレクトリ名のベース（YouTube のみ省略可、video_id にフォールバック） | `AI最新動向まとめ` |
-| **コンテンツ種類** | ✅ | 生成したいコンテンツ | `podcast` / `image` / `slide` / `video` / `quiz` / `flashcards` / `report` / `data-table` |
-| **プロンプト** | 推奨 | 生成時の指示（省略可但非推奨） | `日本語で楽しく解説して` |
-| **オプション** | 任意 | README.md「オプション一覧」参照 | `format: deep-dive`, `length: long` |
-| **言語設定** | 任意 | デフォルト `ja` | `en`, `ja` |
-| **通知設定** | 任意 | GitHub Issue 通知（省略で無効）※ `gh` CLI のインストールとログインが必要 | `github_issue: 1` |
+| Item | Required | Description | Example |
+|------|----------|-------------|---------|
+| **source** | ✅ | Target URL or file path (YouTube URL / Website URL / file path, multiple allowed) | `https://www.youtube.com/watch?v=XXXXX` |
+| **title** | ✅ | Notebook name on NotebookLM & output directory base (optional for YouTube — falls back to `video_id`) | `AI Weekly Digest` |
+| **content type** | ✅ | Type of content to generate | `podcast` / `image` / `slide` / `video` / `quiz` / `flashcards` / `report` / `data-table` |
+| **prompt** | Recommended | Generation instructions (optional but recommended) | `Summarize in an engaging tone` |
+| **options** | Optional | See "Options" in README.md | `format: deep-dive`, `length: long` |
+| **language** | Optional | Default: `ja` | `en`, `ja` |
+| **notify** | Optional | GitHub Issue notification (requires `gh` CLI) | `github_issue: 1` |
 
-> ユーザーが「この動画でポッドキャスト作って」のように簡潔に依頼した場合、**プロンプトの希望**を確認する。  
-> 省略された任意項目はデフォルト値を使用する。
+> If the user gives a brief request like "make a podcast from this video", confirm the desired **prompt**.
+> Omitted optional items use default values.
 
-補足: 指示書は `.yml` / `.yaml` を想定する。
+Note: Instruction files use `.yml` / `.yaml` extension.
 
-### Step 2: バッチ実行
+### Step 2: Execute batch
 
-**バックグラウンド実行をデフォルトとする**（生成は数分〜十数分かかるため、ターミナルを占有しないバックグラウンド実行が推奨）
+**Background execution is the default** (generation takes several minutes to tens of minutes, so non-blocking background execution is preferred):
 
 ```bash
-# バックグラウンド実行（推奨）
+# Background execution (recommended)
 nohup python3 ./run_batch.py ./instructions/<INSTRUCTION>.yaml > log/nohup_output.log 2>&1 &
 
-# フォアグラウンド実行（進捗確認用、Ctrl+C で中断可能）
+# Foreground execution (shows progress spinner, Ctrl+C to abort)
 python3 ./run_batch.py ./instructions/<INSTRUCTION>.yaml
 ```
 
-- バックグラウンド: `settings.notify` と組み合わせて「投げて放置 → GitHub 通知が来る」UX
-- フォアグラウンド: スピナーで進捗表示。長時間ターミナルを占有するため通常は非推奨
-- 同じYAMLで再実行すると自動リジューム
-- 詳細な挙動は README.md を参照
+- Background: pair with `settings.notify` for "fire and forget → GitHub notification" UX
+- Foreground: shows progress spinner, but blocks the terminal — not recommended for long jobs
+- Re-running the same YAML auto-resumes from where it left off
+- See README.md for detailed behavior
 
-### Step 3: 結果確認
+### Step 3: Check results
 
-- 成果物: `./files/<safe_title>__<source_hash>/<type>_<hash>.<ext>`
-- 進捗ファイル: `./log/run_*.json`
+- Outputs: `./files/<safe_title>__<source_hash>/<type>_<hash>.<ext>`
+- Progress file: `./log/run_*.json`
 
-## 設計原則（アグレッシブ削除方針）
+## Design Principles (Aggressive Deletion)
 
-`run_batch.py` は以下の原則で動作する：
+`run_batch.py` operates on these principles:
 
-1. **成果物ファイルが正**: ローカルにファイルがあればスキップ、なければ生成
-2. **ノートブックは使い捨て**: タスク完了後（成功/失敗/中断問わず）に自動削除される
-3. **毎回新規作成**: 再実行時は `notebook_id` / `source_id` を引き継がず、常に新規ノートブック作成から開始
+1. **Output files are the source of truth**: If a file exists locally, skip it; if not, generate it.
+2. **Notebooks are disposable**: Automatically deleted after task completion (success/failure/interruption).
+3. **Always start fresh**: On re-run, never reuse `notebook_id` / `source_id` — always create a new notebook.
 
-この設計により：
-- NotebookLM上にノートブックが蓄積しない
-- 復旧・状態管理がシンプル（ファイルの有無だけで判定）
-- YouTubeソース追加は高速（数秒〜十数秒）なので再作成コストは軽微
+This design ensures:
+- No notebook accumulation on NotebookLM
+- Simple recovery/state management (only file existence matters)
+- YouTube source addition is fast (seconds to tens of seconds), so re-creation cost is negligible
 
-## 実行フロー（詳細）
+## Execution Flow (Detail)
 
 ```
-タスク開始
-  ├── 全成果物が既に存在? → Yes → タスクスキップ（ノート作成なし）
-  │                        └── No  ↓
-  ├── ノートブック作成
-  ├── ソース追加・待機
-  ├── 各content処理:
-  │     ├── ファイル存在? → Yes → スキップ
-  │     │                 └── No  ↓
-  │     └── 生成 → 待機 → ダウンロード
-  └── [finally] ノートブック削除（成功/失敗/中断問わず）
+Task start
+  ├── All outputs already exist? → Yes → Skip task (no notebook creation)
+  │                               └── No  ↓
+  ├── Create notebook
+  ├── Add source and wait
+  ├── For each content:
+  │     ├── File exists? → Yes → Skip
+  │     │                └── No  ↓
+  │     └── Generate → Wait → Download
+  └── [finally] Delete notebook (regardless of success/failure/interruption)
 ```
 
-## デフォルト設定
+## Default Values
 
-ユーザーが指定しない場合のデフォルト：
+When the user does not specify options:
 
-| 項目 | デフォルト値 |
-|------|-------------|
-| 言語 | `ja`（日本語） |
+| Item | Default |
+|------|---------|
+| Language | `ja` |
 | Podcast format | `deep-dive` |
 | Podcast length | `default` |
 | Infographic orientation | `landscape` |
@@ -127,45 +124,45 @@ python3 ./run_batch.py ./instructions/<INSTRUCTION>.yaml
 | Flashcards difficulty | `medium` |
 | Flashcards download_format | `json` |
 | Report format | `briefing-doc` |
-| Data Table | *(オプションなし、prompt 必須)* |
+| Data Table | *(no options; prompt is required)* |
 
-## エラー対応
+## Error Handling
 
-- **AUTH_REQUIRED（認証エラー）**: `notebooklm login` を再実行 → 同じYAMLで再実行
-- **RATE_LIMITED（レート制限）**: 時間をおいて再実行、または別アカウントで実行
-- **ソース追加失敗**: YouTubeの文字起こしが利用可能か確認
+- **AUTH_REQUIRED**: Re-run `notebooklm login` → re-run the same YAML
+- **RATE_LIMITED**: Wait and retry, or switch to a different account
+- **Source add failure**: Check if the YouTube video has transcripts available
 
-### `notebooklm login` の注意
+### Notes on `notebooklm login`
 
-- `notebooklm login` は、ブラウザ操作（Googleログイン）とターミナル操作（ENTERで保存）が別で進む。
-- ブラウザ側でログインが完了しても、**ターミナルでENTERして `storage_state.json` の保存が完了する前にブラウザを閉じると**、`storage_state` の保存に失敗して再認証が必要になる場合がある。
-- もし閉じてしまった場合は、`notebooklm login` を再実行してやり直す。
+- `notebooklm login` involves two separate steps: browser-side Google login and terminal-side ENTER to save.
+- Even if browser login completes, **closing the browser before pressing ENTER in the terminal** causes `storage_state.json` to fail to save and requires re-authentication.
+- If that happens, just re-run `notebooklm login`.
 
-## 注意事項
+## Notes
 
-- 生成には時間がかかる場合がある（特に動画は数分〜）
-- **ノートブックは処理完了後に自動削除される**（NotebookLM上に残らない）
-- 成果物ファイルを削除すると、次回実行時に再生成される
+- Generation can take time (video in particular can take several minutes or more)
+- **Notebooks are automatically deleted after processing** (they do not remain on NotebookLM)
+- Deleting an output file causes it to be regenerated on the next run
 
-## 参考: CLIコマンド（手動操作用）
+## Reference: CLI Commands (for manual use)
 
-`run_batch.py` が内部で使用するコマンド。通常は直接使用しない。
+Commands used internally by `run_batch.py`. Normally you do not need to run these directly.
 
 ```bash
-# ノートブック作成
+# Create notebook
 notebooklm create --json -- "<TITLE>"
 
-# ソース追加・待機
-notebooklm source add -n <NOTEBOOK_ID> --json "<YOUTUBE_URL>"
+# Add source and wait
+notebooklm source add -n <NOTEBOOK_ID> --json "<SOURCE_URL>"
 notebooklm source wait -n <NOTEBOOK_ID> <SOURCE_ID> --timeout 600 --json
 
-# コンテンツ生成
+# Generate content
 notebooklm generate <TYPE> -n <NOTEBOOK_ID> --language ja --json -- "<PROMPT>"
 
-# 成果物待機・ダウンロード
+# Wait for artifact and download
 notebooklm artifact wait -n <NOTEBOOK_ID> <ARTIFACT_ID> --timeout 86400 --interval 5 --json
 notebooklm download <TYPE> -n <NOTEBOOK_ID> -a <ARTIFACT_ID> <OUTPUT_PATH> --force
 
-# ノートブック削除
+# Delete notebook
 notebooklm delete -n <NOTEBOOK_ID> -y
 ```

@@ -1,6 +1,6 @@
 # NotebookLM Batch
 
-![notebooklm-batch概要](assets/Gemini_Generated_Image_dvdka6dvdka6dvdk.png)
+![notebooklm-batch overview](assets/Gemini_Generated_Image_dvdka6dvdka6dvdk.png)
 
 A batch content generation tool that uses NotebookLM to automatically create podcasts, slides, reports, quizzes, and more from YouTube videos and website URLs.
 
@@ -33,7 +33,7 @@ notebooklm login
 ```yaml
 # instructions/my_task.yaml
 settings:
-  language: ja
+  language: en
 
 tasks:
   - source: "https://www.youtube.com/watch?v=YOUR_VIDEO_ID"
@@ -87,520 +87,520 @@ Contributions are welcome. Please open an issue or pull request on [GitHub](http
 
 ## TL;DR
 
-### What it is
-YouTube動画・Webページ等の複数ソースから、NotebookLMを使ってコンテンツを**バッチ自動生成**するツール。YAML指示書を書いて実行するだけ。
+### What it does
+Batch-generates content from YouTube videos, web pages, and other sources using NotebookLM. Write a YAML instruction file, run it, and walk away.
 
-### 仕組みと特徴
-- ソースごとにノートブックを自動作成 → コンテンツ生成 → ダウンロード → ノートブック自動削除
-  - ノートブックをサービス側に残さずサービスを生成エンジンとして扱います。
-- **成果物ファイルが正**: ローカルにファイルがあればスキップ（再実行・リジューム対応）
-- **自動リジューム**: 同じYAMLで再実行すると未完了分から自動再開
-- **冪等性**: 同じソース → 同じ出力ディレクトリ・ファイル名（安定ハッシュ方式）
+### How it works
+- Automatically creates a notebook per source → generates content → downloads → deletes the notebook
+  - NotebookLM is used as a generation engine; no notebooks are left behind on the service
+- **Output files are the source of truth**: if a file exists locally, it is skipped (supports rerun and resume)
+- **Auto-resume**: re-running the same YAML resumes from where it left off
+- **Idempotent**: same source → same output directory and filename (stable hashing)
 
-### お薦めのユースケース
-- YouTube動画を複数まとめてPodcast/スライド/レポートに変換
-- ニュース記事・技術ブログを一括でレポート/フラッシュカード化
-- バックグラウンド実行 + GitHub通知で「投げて放置」運用
+### Recommended use cases
+- Batch-convert multiple YouTube videos into podcasts, slides, or reports
+- Bulk-process news articles or tech blogs into reports or flashcards
+- "Fire and forget" with background execution + GitHub Issue notifications
 
-### 対応 IN / OUT
+### Supported IN / OUT
 
-| IN（ソース） | OUT（コンテンツ） |
-|-------------|-----------------|
-| YouTube URL | Podcast（MP3） |
-| Website URL | Infographic（PNG） |
-| テキストファイル | Slide Deck（PDF/PPTX） |
-| インラインテキスト | Video（MP4） |
-| | Quiz（JSON/MD/HTML） |
-| | Flashcards（JSON/MD/HTML） |
-| | Report（Markdown） |
-| | Data Table（CSV） |
+| IN (source) | OUT (content) |
+|-------------|---------------|
+| YouTube URL | Podcast (MP3) |
+| Website URL | Infographic (PNG) |
+| Text file | Slide Deck (PDF) |
+| Inline text | Video (MP4) |
+| | Quiz (JSON) |
+| | Flashcards (JSON) |
+| | Report (Markdown) |
+| | Data Table (CSV) |
 
 ---
 
-# ディレクトリ構成
+# Directory Layout
 
 ```
 notebooklm-batch/
-├── README.md                   # 本ドキュメント
-├── AGENTS.md                   # AI向け実行指示書
-├── run_batch.py                # バッチ実行スクリプト
-├── instructions/               # 指示書YAML配置ディレクトリ
-│   └── <任意の名前>.yaml
-├── files/                      # 生成物
-│   └── <safe_title>__<source_hash>/       # 例: AI最新動向まとめ__7f3a2c1b/
-│       ├── <type>_<hash>.png              # 例: image_a1b2c3d4.png
-│       ├── <type>_<hash>.mp3              # 例: podcast_e5f6g7h8.mp3
+├── README.md                   # This document
+├── AGENTS.md                   # Operational guide for AI agents
+├── run_batch.py                # Batch execution script
+├── instructions/               # YAML instruction files
+│   └── <any-name>.yaml
+├── files/                      # Generated outputs
+│   └── <safe_title>__<source_hash>/
+│       ├── <type>_<hash>.png
+│       ├── <type>_<hash>.mp3
 │       └── ...
-└── log/                        # 実行ログ・進捗ファイル
-    └── run_YYYYMMDDHHmmss.json # 進捗（再開用）
+└── log/                        # Run logs and progress files
+    └── run_YYYYMMDDHHmmss.json
 ```
 
-| ディレクトリ/ファイル | 説明 |
-|----------------------|------|
-| `instructions/` | ユーザーが作成する YAML 指示書の配置先 |
-| `files/` | 生成された成果物（画像・音声・動画・PDF）の保存先 |
-| `log/` | 実行ログと進捗 JSON（自動再開に使用） |
-| `run_batch.py` | バッチ処理の実行スクリプト |
-| `AGENT.md` | AI がバッチ処理を実行する際の指示書 |
+| Directory / File | Description |
+|------------------|-------------|
+| `instructions/` | Where users place YAML instruction files |
+| `files/` | Where generated outputs (images, audio, video, PDF) are saved |
+| `log/` | Execution logs and progress JSON (used for auto-resume) |
+| `run_batch.py` | Batch processing script |
+| `AGENTS.md` | Operational guide for AI agents running the batch |
 
-# 実行（Runbook）
+# Execution (Runbook)
 
-ユーザーは、`./instructions/` に指定フォーマットでYAML指示書を配置し、同YAMLを指定して実行をAIに指示する（初回認証はユーザーによるブラウザ操作が必要）。
-- AIは `./AGENT.md` に従い、ユーザーが指定したYAML指示書を元に処理を `run_batch.py` で実行する。
-- ユーザーは指示書YAMLの作成自体をAIに指示してもよい。
+Place a YAML instruction file under `./instructions/` and ask an AI agent (or run directly) to execute it with `run_batch.py`. Initial authentication requires browser-based login by the user.
 
-### 指示書作成をAIに委託する場合
+- The AI follows `AGENTS.md` to execute processing based on the YAML file.
+- The user can also ask the AI to create the instruction YAML itself.
 
-AIがユーザーに確認する事項:
+### When asking an AI to create an instruction file
 
-| 項目 | 必須 | 説明 | 例 |
-|------|------|------|------|
-| **YouTube URL** | ✅ | 処理対象の動画URL（複数可） | `https://www.youtube.com/watch?v=XXXXX` |
-| **コンテンツ種類** | ✅ | 生成したいコンテンツ | `podcast` / `image` / `slide` / `video` |
-| **ノートブック名** | 任意 | NotebookLM上の名前（省略時はvideo_id） | `AI最新動向まとめ` |
-| **プロンプト** | 推奨 | 生成時の指示（省略可但非推奨） | `日本語で楽しく解説して` |
-| **オプション** | 任意 | README.md「オプション一覧」参照 | `format: deep-dive`, `length: long` |
-| **言語設定** | 任意 | デフォルト `ja` | `en`, `ja` |
+Items the AI will confirm with the user:
 
-> ユーザーが「この動画でポッドキャスト作って」のように簡潔に依頼した場合、AIはプロンプトの希望を確認する。
+| Item | Required | Description | Example |
+|------|----------|-------------|---------|
+| **source** | ✅ | Target URL(s) (multiple allowed) | `https://www.youtube.com/watch?v=XXXXX` |
+| **content type** | ✅ | What to generate | `podcast` / `image` / `slide` / `video` |
+| **title** | Optional | Notebook name (required for non-YouTube sources) | `AI Weekly Digest` |
+| **prompt** | Recommended | Generation instructions | `Summarize in a clear, engaging tone` |
+| **options** | Optional | See "Options" section below | `format: deep-dive`, `length: long` |
+| **language** | Optional | Default: `ja` | `en`, `ja` |
 
-現行仕様（`run_batch.py` の挙動）:
+> If the user gives a brief request such as "make a podcast from this video", the AI will confirm the desired prompt.
 
-- NotebookLM上のノートブックタイトルはYAML指示書の`tasks[].title` をそのまま使用する
-- `tasks[].title` が未指定の場合は `video_id` をタイトルとして使用する
-- suffix 付与はしない
+Current behavior of `run_batch.py`:
 
-# 指示書フォーマット
+- The notebook title on NotebookLM uses `tasks[].title` from the YAML as-is
+- If `tasks[].title` is omitted, `video_id` is used as the title (YouTube only)
+- No suffix is appended
 
-指示書は YAML 形式で記述する。
+# Instruction File Format
 
-- **保存先**: `./instructions/`
-- **命名規則**: `<任意の名前>.yml` または `<任意の名前>.yaml`
-  - 例: `instruction.yaml`, `gasg_ai_20260207.yaml`
-  - 用途や日付で識別できる名前を推奨
+Instruction files are written in YAML.
 
-> 注意: 指示書は Markdown（`.md`）ではなく YAML（`.yml` / `.yaml`）として管理する。
+- **Location**: `./instructions/`
+- **Naming**: `<any-name>.yml` or `<any-name>.yaml`
+  - e.g. `instruction.yaml`, `ai_digest_20260207.yaml`
+  - Use a name that identifies the purpose or date
 
-## 基本構造
+> Note: Instruction files are YAML (`.yml` / `.yaml`), not Markdown (`.md`).
+
+## Basic Structure
 
 ```yaml
-# NotebookLM バッチ処理指示書
+# NotebookLM batch instruction
 settings:
-  language: ja                  # デフォルト言語
-  notify:                       # GitHub Issue 通知（省略で無効）
-    github_issue: 1             # 通知先の Issue 番号
+  language: en                  # Output language
+  notify:                       # GitHub Issue notification (omit to disable)
+    github_issue: 1             # Issue number to post to
 
 tasks:
-  - source: "https://www.youtube.com/watch?v=XXXXX"   # YouTube URL
-    title: "ノートブック名"     # 出力先: files/ノートブック名__<hash>/
+  - source: "https://www.youtube.com/watch?v=XXXXX"
+    title: "Notebook Title"
     contents:
       - type: podcast
-        prompt: "日本語で楽しく解説して"
+        prompt: "Summarize the video in an engaging way."
         options:
           format: deep-dive
           length: default
 
       - type: image
-        prompt: "全体の要約を視覚的にまとめて"
+        prompt: "Visually summarize the key points."
         options:
           orientation: landscape
           detail: standard
 
-  - source: "https://example.com/article"             # Website URL
-    title: "記事タイトル"
+  - source: "https://example.com/article"
+    title: "Article Summary"
     contents:
       - type: report
-        prompt: "要点を日本語でまとめて"
+        prompt: "Summarize the key points of the article."
 ```
 
-## フィールド仕様
+## Field Reference
 
-### settings（グローバル設定）
+### settings (global configuration)
 
-| フィールド | 必須 | デフォルト | 説明 |
-|-----------|------|-----------|------|
-| `language` | No | `ja` | 生成時の言語指定（`notebooklm generate --language` に渡される） |
-| `notify` | No | *(無効)* | GitHub Issue 通知設定（下記参照） |
+| Field | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `language` | No | `ja` | Language for generation (passed to `notebooklm generate --language`) |
+| `notify` | No | *(disabled)* | GitHub Issue notification settings (see below) |
 
-#### notify（GitHub Issue 通知）
+#### notify (GitHub Issue notification)
 
-バッチ処理の進捗・完了・エラーを GitHub Issue へのコメントとして通知します。
-省略した場合、通知機能は無効です（従来通りの動作）。
+Posts batch progress, completion, and errors as comments on a GitHub Issue.
+Omit to disable notification (default behavior).
 
 ```yaml
 settings:
   notify:
-    github_issue: 1                            # 通知先の Issue 番号（必須）
-    github_repo: "YourName/notebooklm-batch"   # 省略時は gh が origin から自動解決
+    github_issue: 1                            # Issue number to post to (required)
+    github_repo: "YourName/notebooklm-batch"   # Omit to auto-resolve from git origin
 ```
 
-| フィールド | 必須 | 説明 |
-|-----------|------|------|
-| `github_issue` | Yes（notify 使用時） | 通知先の Issue 番号 |
-| `github_repo` | No | 対象リポジトリ（`owner/repo` 形式）。省略時は `gh` CLI が origin リモートから自動解決 |
+| Field | Required | Description |
+|-------|----------|-------------|
+| `github_issue` | Yes (when notify is used) | Target Issue number |
+| `github_repo` | No | Target repository (`owner/repo`). Omit to auto-resolve via `gh` CLI from origin remote |
 
-**前提条件**:
-- `gh` CLI がインストール済み・認証済みであること（`gh auth status` で確認）
-- 通知先の Issue が対象リポジトリに存在すること
+**Prerequisites**:
+- `gh` CLI must be installed and authenticated (`gh auth status`)
+- The target Issue must exist in the repository
 
-**通知タイミング**:
+**Notification events**:
 
-| アイコン | タイミング | 例 |
-|---------|-----------|-----|
-| 🔄 | バッチ開始 | `🔄 バッチ開始: 3タスク / 7コンテンツ` |
-| ⏭️ | スキップ（成果物が既存） | `⏭️ [1/3] image スキップ（既存）` |
-| 📦 | コンテンツ1件完了 | `📦 [1/3] image 生成完了` |
-| 🚫 | RATE_LIMITED / AUTH_REQUIRED | `🚫 RATE_LIMITED で停止` |
-| ❌ | エラー | `❌ エラー: GENERATE_FAILED` |
-| ✅ | バッチ全体完了 | `✅ 完了: NEW:3 SKIP:2 / 05:30経過` |
-| ⏹️ | Ctrl+C 中断 | `⏹️ 中断: 2/5件完了` |
+| Icon | Timing | Example |
+|------|--------|---------|
+| 🔄 | Batch start | `🔄 Batch started: 3 tasks / 7 contents` |
+| ⏭️ | Skipped (output already exists) | `⏭️ [1/3] image skipped (exists)` |
+| 📦 | Content completed | `📦 [1/3] image generated` |
+| 🚫 | RATE_LIMITED / AUTH_REQUIRED | `🚫 Stopped: RATE_LIMITED` |
+| ❌ | Error | `❌ Error: GENERATE_FAILED` |
+| ✅ | Batch completed | `✅ Done: NEW:3 SKIP:2 / 05:30 elapsed` |
+| ⏹️ | Ctrl+C interrupted | `⏹️ Interrupted: 2/5 completed` |
 
-**注意**: 通知は best-effort です。通知の送信に失敗してもバッチ処理自体は影響を受けません。
+**Note**: Notifications are best-effort. Notification failures do not affect batch processing.
 
-> **補足**: `language` は notebooklm CLI の `--language` オプションに対応しています。
-> - YAML で未指定の場合、`run_batch.py` は `ja` をデフォルトとして使用します
-> - CLI 自体のデフォルトは `en` のため、日本語で生成したい場合は明示的に `ja` を指定するか、省略してください（`run_batch.py` が `ja` を補完）
+> **Note on `language`**: corresponds to the `--language` option of the notebooklm CLI.
+> - If not specified in YAML, `run_batch.py` defaults to `ja`
+> - The CLI's own default is `en`, so specify `ja` explicitly or omit it (run_batch.py fills in `ja`)
 
-### tasks[].（タスク定義）
+### tasks[] (task definition)
 
-| フィールド | 必須 | 説明 |
-|-----------|------|------|
-| `source` | Yes | ソース（YouTube URL / Website URL / テキストファイルパス等） |
-| `title` | Yes* | NotebookLM上のノートブック名 & 出力ディレクトリ名のベース。*YouTube URLのみ省略可（省略時は`video_id`にフォールバック） |
-| `contents` | Yes（1以上） | 生成するコンテンツのリスト |
+| Field | Required | Description |
+|-------|----------|-------------|
+| `source` | Yes | Source (YouTube URL / Website URL / text file path / inline text) |
+| `title` | Yes* | Notebook name on NotebookLM & base for output directory name. *YouTube URLs may omit (falls back to `video_id`) |
+| `contents` | Yes (1+) | List of content to generate |
 
-> **後方互換**: `url:` フィールドも引き続き動作しますが、警告が出ます。新規指示書では `source:` を使用してください。
+> **Backward compatibility**: the `url:` field still works but emits a warning. Use `source:` in new files.
 
-### tasks[].contents[].（コンテンツ定義）
+### tasks[].contents[] (content definition)
 
-| フィールド | 必須 | 説明 |
-|-----------|------|------|
+| Field | Required | Description |
+|-------|----------|-------------|
 | `type` | Yes | `podcast` / `image` / `slide` / `video` / `quiz` / `flashcards` / `report` / `data-table` |
-| `prompt` | No | 生成時のカスタムインストラクション |
-| `options` | No | コンテンツタイプ別のオプション（後述） |
+| `prompt` | No | Custom instructions for generation |
+| `options` | No | Per-type options (see below) |
 
-> 出力ファイル名は `<type>_<hash>.<ext>` 形式で自動決定される（安定ハッシュ方式）
+> Output filename is automatically determined as `<type>_<hash>.<ext>` (stable hash)
 
-## 生成可能なコンテンツ
+## Supported Content Types
 
-| タイプ | CLI コマンド | 出力形式 | 主なオプション |
-|--------|-------------|----------|----------------|
+| Type | CLI command | Output format | Key options |
+|------|-------------|---------------|-------------|
 | **Podcast** | `generate audio` | MP3 | format, length |
-| **Infographic（画像）** | `generate infographic` | PNG | orientation, detail |
-| **Slide Deck（スライド）** | `generate slide-deck` | PDF | format, length |
-| **Video（動画）** | `generate video` | MP4 | format, style |
-| **Quiz（クイズ）** | `generate quiz` | JSON | quantity, difficulty, download_format |
-| **Flashcards（フラッシュカード）** | `generate flashcards` | JSON | quantity, difficulty, download_format |
-| **Report（レポート）** | `generate report` | Markdown | format |
-| **Data Table（データテーブル）** | `generate data-table` | CSV | *(なし)* |
+| **Infographic** | `generate infographic` | PNG | orientation, detail |
+| **Slide Deck** | `generate slide-deck` | PDF | format, length |
+| **Video** | `generate video` | MP4 | format, style |
+| **Quiz** | `generate quiz` | JSON | quantity, difficulty, download_format |
+| **Flashcards** | `generate flashcards` | JSON | quantity, difficulty, download_format |
+| **Report** | `generate report` | Markdown | format |
+| **Data Table** | `generate data-table` | CSV | *(none)* |
 
-## オプション一覧
-> オプションを指定しない場合、NotebookLMのデフォルト値が使用される。その挙動は正確には把握していないのでなるべくオプションを指定することを推奨する。
+## Options
+
+> When options are omitted, NotebookLM's defaults are used. Specifying options explicitly is recommended for predictable results.
 
 ### Audio (Podcast)
 
-| オプション | 値 |
-|-----------|-----|
+| Option | Values |
+|--------|--------|
 | `--format` | `deep-dive` / `brief` / `critique` / `debate` |
 | `--length` | `short` / `default` / `long` |
 
-### Infographic（画像）
+### Infographic
 
-| オプション | 値 |
-|-----------|-----|
+| Option | Values |
+|--------|--------|
 | `--orientation` | `landscape` / `portrait` / `square` |
 | `--detail` | `concise` / `standard` / `detailed` |
 
-### Slide Deck（スライド）
+### Slide Deck
 
-| オプション | 値 |
-|-----------|-----|
+| Option | Values |
+|--------|--------|
 | `--format` | `detailed` / `presenter` |
 | `--length` | `default` / `short` |
-| `download_format` | `pdf`（デフォルト）/ `pptx`（編集可能な PowerPoint 形式） |
+| `download_format` | `pdf` (default) / `pptx` (editable PowerPoint) |
 
-### Video（動画）
+### Video
 
-| オプション | 値 |
-|-----------|-----|
+| Option | Values |
+|--------|--------|
 | `--format` | `explainer` / `brief` |
 | `--style` | `auto-select` / `classic` / `whiteboard` / `kawaii` / `anime` / `watercolor` / `retro-print` / `heritage` / `paper-craft` |
 
-### Quiz（クイズ）
+### Quiz
 
-| オプション | 値 |
-|-----------|-----|
+| Option | Values |
+|--------|--------|
 | `--quantity` | `fewer` / `standard` / `more` |
 | `--difficulty` | `easy` / `medium` / `hard` |
-| `download_format` | `json` / `markdown` / `html`（download時の出力形式、デフォルト: `json`） |
+| `download_format` | `json` / `markdown` / `html` (default: `json`) |
 
-> 注意: `--quantity more` は API 内部では `standard` と同義（既知の制限）。`--language` は非対応。`download_format` を変更すると出力ファイルの拡張子もそれに合わせて変わる（`markdown` → `.md`、`html` → `.html`）。
+> Note: `--quantity more` is equivalent to `standard` internally (known limitation). `--language` is not supported. Changing `download_format` changes the output file extension accordingly (`markdown` → `.md`, `html` → `.html`).
 
-### Flashcards（フラッシュカード）
+### Flashcards
 
-| オプション | 値 |
-|-----------|-----|
+| Option | Values |
+|--------|--------|
 | `--quantity` | `fewer` / `standard` / `more` |
 | `--difficulty` | `easy` / `medium` / `hard` |
-| `download_format` | `json` / `markdown` / `html`（download時の出力形式、デフォルト: `json`） |
+| `download_format` | `json` / `markdown` / `html` (default: `json`) |
 
-> 注意: `--language` は非対応。`download_format` を変更すると出力ファイルの拡張子もそれに合わせて変わる。
+> Note: `--language` is not supported. Changing `download_format` changes the output file extension accordingly.
 
-### Report（レポート）
+### Report
 
-| オプション | 値 |
-|-----------|-----|
+| Option | Values |
+|--------|--------|
 | `--format` | `briefing-doc` / `study-guide` / `blog-post` / `custom` |
 
-> 注意: prompt を指定すると自動的に `custom` フォーマットに切り替わる。`--append` オプションで既存フォーマット（briefing-doc/study-guide/blog-post）にカスタム指示を追記できる。
+> Note: Specifying a prompt automatically switches to `custom` format. Use `--append` to add custom instructions to an existing format (briefing-doc / study-guide / blog-post).
 
-### Data Table（データテーブル）
+### Data Table
 
-generate オプションなし。**prompt が必須**（空文字だと CLI エラー）。出力は CSV（UTF-8-BOM）。
+No generate options. **Prompt is required** (empty prompt causes a CLI error). Output is CSV (UTF-8-BOM).
 
-## 指示書の例
+## Example Instruction Files
 
-### 最小構成（YouTube・1コンテンツ）
+### Minimal (YouTube, single content)
 
 ```yaml
 tasks:
   - source: "https://www.youtube.com/watch?v=XXXXX"
-    title: "動画タイトル"
+    title: "Video Title"
     contents:
       - type: podcast
-        prompt: "日本語で楽しく解説して"
+        prompt: "Summarize the video in an engaging way."
 ```
 
-> `title` はYouTube URLの場合のみ省略可（`video_id` にフォールバック）。`prompt` も省略可だが指定を推奨。
+> `title` is optional for YouTube URLs only (falls back to `video_id`). `prompt` is also optional but recommended.
 
-### フル構成（複数ソース・複数コンテンツ）
+### Full (multiple sources, multiple content types)
 
 ```yaml
 settings:
-  language: ja
+  language: en
   notify:
     github_issue: 1
 
 tasks:
   - source: "https://www.youtube.com/watch?v=XXXXX"
-    title: "AI最新動向まとめ"   # 出力先: files/AI最新動向まとめ__<hash>/
+    title: "AI Trends Digest"
     contents:
       - type: podcast
-        prompt: "カジュアルなトーンで楽しく解説して"
+        prompt: "Cover the overall picture first, then dive into individual topics."
         options:
           format: deep-dive
           length: long
       - type: image
-        prompt: "主要ポイントを3つに絞って図解"
+        prompt: "Summarize the 3 key points visually."
         options:
           orientation: portrait
           detail: concise
       - type: slide
-        prompt: "社内共有用のプレゼン資料として"
+        prompt: "Create a presentation suitable for internal sharing."
         options:
           format: presenter
           length: default
 
-  - source: "https://example.com/tech-article"   # Website URL
-    title: "技術記事まとめ"     # 出力先: files/技術記事まとめ__<hash>/
+  - source: "https://example.com/tech-article"
+    title: "Tech Article Summary"
     contents:
       - type: report
-        prompt: "技術選定の観点でまとめて"
+        prompt: "Summarize from a technology selection perspective."
         options:
           format: briefing-doc
       - type: quiz
-        prompt: "記事の重要ポイントを出題"
+        prompt: "Quiz on the key points of the article."
         options:
           quantity: standard
           difficulty: medium
       - type: data-table
-        prompt: "紹介されたツールの比較表を作成して"
+        prompt: "Create a comparison table of the tools mentioned."
 ```
-## 識別子（用語）
+
+## Identifiers
 
 - `run_id`
-  - 1回のバッチ実行に付与される識別子
-  - 形式: `YYYYMMDDHHmmss`（例: `20260208200022`）
-  - 使い道: 進捗ファイル名（`./log/run_<run_id>.json`）や、一時ファイルの衝突回避（`.__tmp__<run_id>`）
-- `source_hash`（出力ディレクトリ名）
-  - 出力ディレクトリ名は `{safe_title}__{sha256(source)[:8]}` 形式で自動決定される
-  - 同じ `source` なら常に同じディレクトリ（冪等性保証）
-- `type_<hash>`（ファイル名）
-  - 生成物ファイル名は `<type>_<hash>.<ext>` 形式で自動決定される
-  - hash は `source/type/prompt/options` から安定ハッシュで計算（同じ入力なら同じファイル名）
+  - Identifier assigned to each batch execution
+  - Format: `YYYYMMDDHHmmss` (e.g. `20260208200022`)
+  - Used in: progress filename (`./log/run_<run_id>.json`) and temp file collision avoidance (`.__tmp__<run_id>`)
+- `source_hash` (output directory name)
+  - Output directory is automatically determined as `{safe_title}__{sha256(source)[:8]}`
+  - Same `source` always maps to the same directory (idempotency)
+- `type_<hash>` (filename)
+  - Output filename is automatically determined as `<type>_<hash>.<ext>`
+  - Hash is computed from `source/type/prompt/options` using a stable hash (same input → same filename)
 
-## 設計原則
+## Design Principles
 
-- 実行器は Python で CLI（`notebooklm`）をラップし、`--json` 出力をパースして進捗を更新する
-- 再開・完了判定は NotebookLM 側ではなく、ローカル成果物ファイルを正とする
-  - `./files/<video_id>/<type>_<hash>.<ext>` が存在する場合、その `content` は常にスキップする
-  - ファイル名は **安定ハッシュ方式**（`type_<hash>`）で自動決定する
-    - 例: `image_7f3a2c1b`
-    - hash は `url/type/prompt/options` を **JSON化（キーを辞書順にソート）**して計算する
-    - 目的: YAMLの並び順変更に強くし、スキップ/再開の安定性を上げる
-- `RATE_LIMITED` 等で生成に失敗した場合は `blocked` として記録し、別アカウントで再実行しても成果物スキップで吸収できる設計にする
-- 出力ファイル名は決定論的に固定し、書き込みは一時ファイル（例: `<type>_<hash>.<ext>.__tmp__<run_id>`）を経由してから rename で確定する（中断/並列に強い）
+- The execution engine wraps the `notebooklm` CLI in Python, parsing `--json` output to update progress
+- Resume/completion decisions are based on local output files, not NotebookLM server state
+  - If `./files/<dir>/<type>_<hash>.<ext>` exists, that content is always skipped
+  - Filenames are determined by **stable hashing** (`type_<hash>`)
+    - e.g. `image_7f3a2c1b`
+    - Hash is computed by JSON-serializing `url/type/prompt/options` (keys sorted) and taking the first 8 characters of SHA1
+    - Purpose: resilient to YAML reordering, ensuring stable skip/resume behavior
+- On `RATE_LIMITED` and similar failures, the content is recorded as `blocked`; re-running with a different account skips already-completed outputs
+- Output filenames are deterministic and writes go through a temp file (`<type>_<hash>.<ext>.__tmp__<run_id>`) before a rename commit (resilient to interruption and parallelism)
 
-## 運用要件（最小）
+## Operational Requirements (minimum)
 
-- ユーザーは実行対象のYAMLファイルを 1つ 指定して実行を依頼する（複数YAMLの同時処理は想定しない）
-  - 1つのYAML内に複数URL（`tasks[]`）が含まれるのは許容する
-- 起動方法:
+- The user specifies one YAML file per execution (processing multiple YAMLs simultaneously is not supported)
+  - A single YAML may contain multiple sources in `tasks[]`
+- Invocation:
   - `python3 ./run_batch.py ./instructions/<INSTRUCTION>.yaml`
-    > もしくは python ./run_batch.py ./instructions/<INSTRUCTION>.yaml
-- **dry-run モード**（実行前の確認）:
+- **Dry-run mode** (pre-execution verification):
   - `python3 ./run_batch.py ./instructions/<INSTRUCTION>.yaml --dry-run`
-  - 実際の生成は行わず、処理対象と出力先、スキップ判定を確認できる
+  - Shows targets, output paths, and skip decisions without generating anything
 
-## `run_batch.py` の運用仕様
+## `run_batch.py` Operational Spec
 
-- パスの基準ディレクトリはこのREADMEのあるディレクトリ（スクリプトのあるディレクトリ）
-  - 成果物は `./files/` 配下に保存される
-  - 進捗は `./log/run_YYYYMMDDHHmmss.json` に保存される
-- 同一YAMLを再実行した場合、直近の `run_*.json` が存在すれば自動で読み込み、途中から再開する
-  - 自動再開の条件は `run_*.json` 内の `instruction_file`（canonical path）が、今回指定したYAMLのcanonical pathと一致すること
-    - 目的: `./instructions/x.yaml` と `/abs/path/to/.../instructions/x.yaml` のような表記ゆれで再開できない事故をなくす
-- 実行中はプログレスバー付きのスピナーで進捗を表示する
+- Base directory is the directory containing this README (and `run_batch.py`)
+  - Outputs are saved under `./files/`
+  - Progress is saved to `./log/run_YYYYMMDDHHmmss.json`
+- Re-running the same YAML loads the most recent `run_*.json` and resumes from where it left off
+  - Resume condition: `instruction_file` (canonical path) in `run_*.json` matches the canonical path of the specified YAML
+    - Purpose: prevents resume failures due to path representation differences (e.g. `./instructions/x.yaml` vs `/abs/path/.../instructions/x.yaml`)
+- Progress is displayed with a spinner and progress bar:
   ```
   ⠹ 🔄 [████████░░░░░░░░░░░░]  40% (2/5) | NEW:1 SKIP:1 | TIME:01:23 | LOG:run_20260211150030.json
   ```
-  - ステータスアイコン: `🔄` 実行中 / `✅` 完了 / `🚫` blocked / `⏹️` aborted / `❌` error
-  - `(2/5)` 完了数 / 全タスク数
-  - `NEW:n` 新規生成した数 / `SKIP:n` スキップした数（既存ファイルあり）
-  - `TIME:MM:SS` 経過時間（1時間以上は `HH:MM:SS` 形式）
-  - `LOG:run_*.json` 進捗ファイル名
-  - ブロック時は末尾に理由を表示: `[AUTH_REQUIRED]` / `[RATE_LIMITED]`
+  - Status icons: `🔄` running / `✅` completed / `🚫` blocked / `⏹️` aborted / `❌` error
+  - `(2/5)` completed / total
+  - `NEW:n` newly generated / `SKIP:n` skipped (file already exists)
+  - `TIME:MM:SS` elapsed (switches to `HH:MM:SS` after one hour)
+  - `LOG:run_*.json` progress filename
+  - On block, reason is appended: `[AUTH_REQUIRED]` / `[RATE_LIMITED]`
 
-  **表示例**:
+  **Examples**:
   ```
-  # 実行中
+  # Running
   ⠹ 🔄 [████████░░░░░░░░░░░░]  40% (2/5) | NEW:1 SKIP:1 | TIME:01:23 | LOG:run_xxx.json
 
-  # 正常完了
+  # Completed normally
     ✅ [████████████████████] 100% (5/5) | NEW:3 SKIP:2 | TIME:05:30 | LOG:run_xxx.json
 
-  # すべてスキップ（既存ファイルあり）
+  # All skipped (outputs already exist)
     ✅ [████████████████████] 100% (3/3) | NEW:0 SKIP:3 | TIME:00:04 | LOG:run_xxx.json
 
-  # ブロック（認証エラー）
+  # Blocked (auth error)
     🚫 [██████████░░░░░░░░░░]  50% (2/4) | NEW:1 SKIP:1 | TIME:02:15 | LOG:run_xxx.json [AUTH_REQUIRED]
 
-  # ブロック（レートリミット）
+  # Blocked (rate limit)
     🚫 [██████████████░░░░░░]  66% (2/3) | NEW:2 SKIP:0 | TIME:03:45 | LOG:run_xxx.json [RATE_LIMITED]
   ```
-- Ctrl+C で中断した場合は `status=aborted` を記録する（次回は自動再開される）
-- `RATE_LIMITED` / `AUTH_REQUIRED` 等の実行不能は `status=blocked` を記録して停止する
-- 終了コード（目安）:
+- Ctrl+C records `status=aborted` (next run auto-resumes)
+- `RATE_LIMITED` / `AUTH_REQUIRED` records `status=blocked` and stops
+- Exit codes:
   - `0`: completed
   - `3`: blocked
-  - `130`: aborted（Ctrl+C）
-  - `1`: error（ソース待機失敗/生成失敗/ダウンロード失敗など）
-  - `2`: usage error（YAMLが見つからない/形式不正など）
+  - `130`: aborted (Ctrl+C)
+  - `1`: error (source wait failure / generation failure / download failure)
+  - `2`: usage error (YAML not found / invalid format)
 
-### 実装状況（READMEとコードの整合性）
+### Implementation Status
 
-このREADMEは運用判断の根拠となるため、**目標仕様**と**現行実装**の差分はここに集約する。
+This README is the authoritative specification. Divergences between the spec and implementation are recorded here.
 
-- 目標仕様（READMEの方針）
-  - `instruction_file` は **canonical path**（`realpath` 相当）で保存・比較する（表記ゆれに依存しない自動再開）
-  - ファイル名は **安定ハッシュ**（`type_<hash>`）で自動決定する（順序変更に強い）
-- 現行実装（`run_batch.py`）
-  - 上記は実装に反映済み（2026-02-08）
+- Target spec (this README):
+  - `instruction_file` is stored and compared as a **canonical path** (`realpath` equivalent) for representation-agnostic auto-resume
+  - Filenames are determined by **stable hashing** (`type_<hash>`) for resilience to reordering
+- Current implementation (`run_batch.py`):
+  - Both of the above are implemented (as of 2026-02-08)
 
-### `run_batch.py` 詳細仕様
+### `run_batch.py` Detailed Spec
 
-この節は「READMEを正」として運用判断できるように、バッチ実行の挙動を手順・状態・判定基準として言語化したもの。
-（現行実装が未追従の箇所は上の「実装状況」に差分として明記する。）
+This section documents batch execution behavior as steps, states, and decision criteria so that README serves as the authoritative operational reference.
 
-#### 用語
+#### Glossary
 
-- **Instruction**: ユーザーが指定するYAML（例: `./instructions/test_news.yaml`）
-- **Task**: YAMLの `tasks[]` の1要素（基本的にYouTube URL単位）
-- **Content**: `tasks[].contents[]` の1要素（`podcast` / `image` / `slide` / `video` / `quiz` / `flashcards` / `report` / `data-table`）
-- **成果物（output）**: `./files/<video_id>/<type>_<hash>.<ext>`
-- **進捗（run state）**: `./log/run_*.json`
+- **Instruction**: the YAML file specified by the user (e.g. `./instructions/test_news.yaml`)
+- **Task**: one element of `tasks[]` in the YAML (one source)
+- **Content**: one element of `tasks[].contents[]` (`podcast` / `image` / `slide` / etc.)
+- **Output**: `./files/<dir>/<type>_<hash>.<ext>`
+- **Run state**: `./log/run_*.json`
 
-#### 仕様の核（優先順位）
+#### Core Invariants (priority order)
 
-1. **成果物ファイルが正**（再開・完了判定）
-   - 成果物が存在すれば、そのContentは常にスキップされる（再生成しない）
-2. **ノートブックは使い捨て**（アグレッシブ削除方針）
-   - タスク完了/失敗/中断のいずれでも、ノートブックは自動的に削除される
-   - 再実行時は常に新規ノートブック作成から開始（`notebook_id`/`source_id`の引き継ぎなし）
-3. **NotebookLM側の同名ノートや状態には依存しない**（= 依存を減らす）
+1. **Output files are the source of truth** (for skip/resume decisions)
+   - If an output file exists, that Content is always skipped (never regenerated)
+2. **Notebooks are disposable** (aggressive deletion policy)
+   - Notebooks are automatically deleted on task completion/failure/interruption
+   - Re-runs always start fresh notebook creation (no `notebook_id`/`source_id` reuse)
+3. **Never depend on NotebookLM server state** (minimize external dependency)
 
-#### ファイル名の決定（安定ハッシュ）
+#### Filename Determination (Stable Hash)
 
-ファイル名は `<type>_<hash>.<ext>` 形式で自動決定される。
+Filenames are automatically determined as `<type>_<hash>.<ext>`.
 
-- hash は `url/type/prompt/options` を JSON化（キーを辞書順ソート）して SHA1 の先頭8文字を使用
-- 同じ入力なら常に同じファイル名になる（決定論的）
-- YAMLの並び替え・追加・削除でファイル名が変わらない（スキップ/再開が安定）
+- Hash = first 8 characters of SHA1 of `url/type/prompt/options` JSON-serialized (keys sorted)
+- Same input always produces the same filename (deterministic)
+- YAML reordering, addition, or deletion does not change filenames (stable skip/resume)
 
-#### 自動リジューム（`--resume` 引数なし）
+#### Auto-Resume (no `--resume` flag needed)
 
-同じYAMLを再実行したとき、`log/run_*.json` の中から **同一 `instruction_file` を持つ最新のファイル**を探し、以下の条件でリジュームする。
+On re-running the same YAML, `run_batch.py` searches `log/run_*.json` for the **most recent file matching the same `instruction_file`** and resumes under these conditions:
 
-- その run が `completed` ではない場合
-  - 既存 run を読み込み、`status=running` / `resumed_at` を付与して続行
-- それ以外
-  - 新しい `run_*.json` を作成して実行
+- If that run is not `completed`:
+  - Load the existing run, set `status=running` / `resumed_at`, and continue
+- Otherwise:
+  - Create a new `run_*.json` and start fresh
 
-注意: `instruction_file` は canonical path として保存・比較するため、表記ゆれに依存しない自動再開が可能。
+Note: `instruction_file` is stored and compared as a canonical path, so representation differences do not break auto-resume.
 
-- canonical path は Python の `Path.resolve()` 相当で解決する（シンボリックリンクは解決される）
+- Canonical path is resolved via Python's `Path.resolve()` (symlinks are resolved)
 
-#### 実行フロー（逐次）
+#### Execution Flow (sequential)
 
-- Taskを上から順に処理
-  - 全成果物が存在する場合はタスクごとスキップ（ノートブック作成なし）
-  - `notebooklm create --json -- <title>` でノートブック作成
-  - `notebooklm source add --json <url>`→`source wait` でソース追加
-- Contentを上から順に処理
-  - **(A) 成果物ファイルが存在**: `skipped`
-  - **(B) それ以外**: `generate`→`artifact_id` 特定→`artifact wait`→`download`→`completed`
-- タスク終了時（成功/失敗/中断問わず）にノートブックを削除
+- Tasks are processed top to bottom
+  - If all outputs already exist: skip the entire task (no notebook creation)
+  - `notebooklm create --json -- <title>` creates the notebook
+  - `notebooklm source add --json <url>` → `source wait` adds the source
+- Contents are processed top to bottom
+  - **(A) Output file exists**: `skipped`
+  - **(B) Otherwise**: `generate` → identify `artifact_id` → `artifact wait` → `download` → `completed`
+- Notebook is deleted at task end (success/failure/interruption)
 
-#### エラー・停止の扱い
+#### Error and Stop Handling
 
-- `AUTH_REQUIRED`（認証切れ）や `RATE_LIMITED` は **blocked**
-  - 進捗に `status=blocked` と `error` を記録し、処理を停止する
-  - 認証更新（`notebooklm login`）やアカウント切替後、同じYAMLで再実行すると自動リジュームされる
-- Ctrl+C は **aborted**
-  - `status=aborted` を記録して終了
-  - 次回同じYAMLで再実行すると自動リジュームされる
+- `AUTH_REQUIRED` (session expired) or `RATE_LIMITED` → **blocked**
+  - Records `status=blocked` and `error` in progress, stops processing
+  - After re-authentication (`notebooklm login`) or account switch, re-running the same YAML auto-resumes
+- Ctrl+C → **aborted**
+  - Records `status=aborted` and exits
+  - Re-running the same YAML auto-resumes
 
-- Ctrl+C 以外の終了（準正常/異常）
-  - `SIGTERM`（例: ターミナル/アプリの強制終了、ホストのシャットダウン等）も **aborted** として扱う（`status=aborted` を記録）
-  - `SIGKILL`（例: `kill -9`）や電源断/カーネルパニック等は捕捉できないため、`run_*.json` の `status` が `running` のまま残ることがある
-    - その場合でも、同じYAMLで再実行すると既存runを拾って続行する（成果物ファイルが正、既存ファイルはスキップ）
+- Non-Ctrl+C exits:
+  - `SIGTERM` (e.g. terminal/app force-close, host shutdown) is also treated as **aborted** (`status=aborted`)
+  - `SIGKILL` (e.g. `kill -9`) and power loss cannot be caught — `run_*.json` may remain with `status=running`
+    - Even then, re-running the same YAML picks up the existing run and continues (output files are the truth; existing files are skipped)
 
-- `source wait` の失敗（タイムアウト/失敗/readyにならない等）や、download失敗等は **error**
-  - `run_*.json` に `status=error` と `error.code` を記録して終了する（exit code 1）
-  - 再実行時はノートブック作成からやり直し、既に成果物が存在するContentはスキップされる
+- `source wait` failure (timeout/failure/not ready) or download failure → **error**
+  - Records `status=error` and `error.code` in progress, exits (exit code 1)
+  - Re-running restarts from notebook creation; already-completed outputs are skipped
 
-#### 意図的な再生成（スキップの回避）
+#### Forcing Regeneration (bypassing skip)
 
-成果物ファイルが既に存在する場合、同じ指示書を再実行してもそのコンテンツはスキップされる。
-生成結果が期待と異なるなどの理由で**同じ設定のまま再生成したい**場合は、以下のいずれかの方法で対応する。
+If an output file already exists, re-running the same instruction file skips that content. To **regenerate with the same settings**:
 
-| 方法 | 操作 | 備考 |
-|------|------|------|
-| **ファイルを退避** | `mv ./files/<video_id>/<type>_<hash>.<ext> ./files/<video_id>/<type>_<hash>.<ext>.bak` | 元ファイルを保持したまま再生成。比較検証に便利 |
-| **ファイルを削除** | `rm ./files/<video_id>/<type>_<hash>.<ext>` | 単純に再生成したい場合 |
-| **ディレクトリごと退避** | `mv ./files/<video_id> ./files/<video_id>_old` | 当該動画の全コンテンツを再生成したい場合 |
+| Method | Operation | Notes |
+|--------|-----------|-------|
+| **Back up the file** | `mv ./files/<dir>/<type>_<hash>.<ext> ./files/<dir>/<type>_<hash>.<ext>.bak` | Keeps the original for comparison |
+| **Delete the file** | `rm ./files/<dir>/<type>_<hash>.<ext>` | Simple regeneration |
+| **Back up the directory** | `mv ./files/<dir> ./files/<dir>_old` | Regenerates all content for that source |
 
-**注意**: `prompt` や `options` を変更すると、ハッシュが変わり別ファイルとして生成される（既存ファイルは残る）。
+**Note**: Changing `prompt` or `options` produces a different hash, creating a new file (the existing file remains).
 
-```
-# 例: image を再生成したい場合
+```bash
+# Example: force regeneration of an image
 mv ./files/dQw4w9WgXcQ/image_a1b2c3d4.png ./files/dQw4w9WgXcQ/image_a1b2c3d4.png.bak
 
-# 再実行（スキップされずに再生成される）
-python run_batch.py ./instructions/my_instruction.yaml
+# Re-run (the image will be regenerated instead of skipped)
+python3 run_batch.py ./instructions/my_instruction.yaml
 ```
 
-#### Mermaid: 処理フロー
+#### Mermaid: Execution Flow
 
 ```mermaid
 sequenceDiagram
@@ -612,39 +612,39 @@ sequenceDiagram
   participant FS as ./files/
 
   U->>RB: run_batch.py <instruction.yaml>
-  RB->>LOG: 既存runを探索（instruction_file canonical一致）
-  alt 既存runあり & status!=completed
-    RB->>LOG: 既存runを読み込み（status=running,resumed_at）
-  else それ以外
-    RB->>LOG: 新規runを作成（status=running）
+  RB->>LOG: Search for existing run (canonical instruction_file match)
+  alt Existing run found & status != completed
+    RB->>LOG: Load existing run (status=running, resumed_at)
+  else Otherwise
+    RB->>LOG: Create new run (status=running)
   end
 
-  loop tasks[]（URLごと）
-    RB->>FS: 全成果物が存在?
+  loop tasks[] (per source)
+    RB->>FS: All outputs exist?
     alt yes
       RB->>LOG: task.status=skipped
     else no
       RB->>NLM: create --json -- <title>
       NLM-->>RB: notebook_id
-      RB->>LOG: notebook_id保存
+      RB->>LOG: Save notebook_id
 
       RB->>NLM: source add --json <url>
       NLM-->>RB: source_id
       RB->>NLM: source wait --timeout ... --json
       alt ready
-        RB->>LOG: source_id保存
+        RB->>LOG: Save source_id
       else auth required
         RB->>NLM: delete -n <notebook_id> -y
-        RB->>LOG: status=blocked（AUTH_REQUIRED）
+        RB->>LOG: status=blocked (AUTH_REQUIRED)
         RB-->>U: exit 3
       else timeout/fail/not_ready
         RB->>NLM: delete -n <notebook_id> -y
-        RB->>LOG: status=error（SOURCE_*）
+        RB->>LOG: status=error (SOURCE_*)
         RB-->>U: exit 1
       end
 
-      loop contents[]（生成物ごと）
-        RB->>FS: output exists?
+      loop contents[] (per content)
+        RB->>FS: Output exists?
         alt yes
           RB->>LOG: content.status=skipped
         else no
@@ -656,7 +656,7 @@ sequenceDiagram
           else ok
             RB->>NLM: artifact wait --json
             RB->>NLM: download <type>
-            RB->>FS: tmp→renameで確定
+            RB->>FS: tmp → rename commit
             RB->>LOG: content.status=completed
           end
         end
@@ -671,204 +671,201 @@ sequenceDiagram
   RB-->>U: exit 0
 ```
 
-#### Mermaid: run state（概念的な状態遷移）
+#### Mermaid: Run State Transitions
 
 ```mermaid
 stateDiagram-v2
   [*] --> running
-  [*] --> skipped: 全成果物が既に存在
+  [*] --> skipped: All outputs already exist
   running --> completed
-  running --> skipped: 全成果物が既に存在
+  running --> skipped: All outputs already exist
   running --> blocked
   running --> aborted
   running --> error
-  blocked --> running: (認証更新/アカウント切替後に再実行)
-  aborted --> running: (再実行)
-  error --> running: (再実行)
+  blocked --> running: (re-auth / account switch, then re-run)
+  aborted --> running: (re-run)
+  error --> running: (re-run)
 ```
 
-#### ステータス値一覧
+#### Status Values
 
-| レベル | ステータス | 説明 |
-|--------|-----------|------|
-| run / task | `running` | 実行中 |
-| run / task | `completed` | 正常完了 |
-| run / task | `skipped` | 全成果物が既に存在するためスキップ |
-| run / task | `blocked` | 認証切れ/レート制限で停止 |
-| run / task | `aborted` | Ctrl+C / SIGTERM で中断 |
-| run / task | `error` | 処理失敗（ソース待機失敗/生成失敗/ダウンロード失敗等） |
-| content | `pending` | 未処理 |
-| content | `running` | 処理中 |
-| content | `completed` | 正常完了 |
-| content | `skipped` | 成果物ファイルが既に存在するためスキップ |
-| content | `blocked` | 認証切れ/レート制限 |
-| content | `error` | 処理失敗 |
+| Level | Status | Description |
+|-------|--------|-------------|
+| run / task | `running` | In progress |
+| run / task | `completed` | Completed successfully |
+| run / task | `skipped` | Skipped because all outputs already exist |
+| run / task | `blocked` | Stopped due to auth expiry / rate limit |
+| run / task | `aborted` | Interrupted by Ctrl+C / SIGTERM |
+| run / task | `error` | Processing failed (source wait / generate / download failure) |
+| content | `pending` | Not yet processed |
+| content | `running` | Being processed |
+| content | `completed` | Completed successfully |
+| content | `skipped` | Skipped because output file already exists |
+| content | `blocked` | Auth expiry / rate limit |
+| content | `error` | Processing failed |
 
-### 実運用手順（Runbook）
+### Operational Runbook
 
-このRunbookは、ユーザーが「指示書YAMLを1つ指定して実行」できるための最小手順。
+Minimum steps for the user to run "specify one YAML and execute."
 
-#### 1. 初回/再認証（必要なときだけ）
+#### 1. Initial / Re-authentication (only when needed)
 
-認証が切れている場合や、別アカウントで実行したい場合は以下。
+If the session has expired or you want to run with a different account:
 
 ```bash
 notebooklm login
 ```
 
-- ブラウザでGoogleログインし、NotebookLMのホームが見えたらENTER
+- Log in to Google in the browser, press ENTER in the terminal once NotebookLM's home is visible
 
-#### 2. 実行
+#### 2. Execute
 
-生成には数分〜十数分かかるため、**バックグラウンド実行を推奨**。`settings.notify` と組み合わせることで「投げて放置 → GitHub 通知が来る」UX になる。
+Generation takes minutes to tens of minutes — **background execution is recommended**. Pair with `settings.notify` for "fire and forget → GitHub notification" UX.
 
 ```bash
-# バックグラウンド実行（推奨）
+# Background execution (recommended)
 nohup python3 ./run_batch.py ./instructions/<INSTRUCTION>.yaml > log/nohup_output.log 2>&1 &
 
-# フォアグラウンド実行（スピナーで進捗表示、Ctrl+C で中断可能）
+# Foreground execution (shows progress spinner, Ctrl+C to abort)
 python3 ./run_batch.py ./instructions/<INSTRUCTION>.yaml
 ```
 
-#### 3. 結果の確認
+#### 3. Check results
 
-- 進捗ファイル（run state）
-  - `./log/run_YYYYMMDDHHmmss.json`
-- 成果物
-  - `./files/<video_id>/<type>_<hash>.<ext>`
+- Progress file (run state): `./log/run_YYYYMMDDHHmmss.json`
+- Outputs: `./files/<dir>/<type>_<hash>.<ext>`
 
-#### 4. 中断（Ctrl+C）と再開
+#### 4. Interruption (Ctrl+C) and resume
 
-- 実行を中断したい場合は Ctrl+C
-  - `run_*.json` に `status=aborted` が記録される
-- 再開したい場合は **同じYAMLを再実行**する
-  - `instruction_file`（canonical path）が一致する最新の `run_*.json` を自動で読み込み、途中から再開する
+- Press Ctrl+C to interrupt
+  - `run_*.json` records `status=aborted`
+- To resume, **re-run the same YAML**
+  - The most recent `run_*.json` with a matching `instruction_file` (canonical path) is automatically loaded and processing continues
 
-#### 5. blocked（AUTH_REQUIRED / RATE_LIMITED）時の対応
+#### 5. Handling blocked status (AUTH_REQUIRED / RATE_LIMITED)
 
-`run_*.json` が `status=blocked` になった場合は、原因に応じて対応してから再実行する。
+If `run_*.json` shows `status=blocked`, address the cause and re-run:
 
 - `AUTH_REQUIRED`
-  - `notebooklm login` で再認証→同じYAMLで再実行
+  - `notebooklm login` to re-authenticate → re-run the same YAML
 - `RATE_LIMITED`
-  - 時間をおいて再実行するか、別アカウントへ切り替えて実行する
-  - 別アカウントへ切替する場合は、既存の `storage_state.json` を退避してから `notebooklm login`
+  - Wait and retry, or switch to a different account
+  - To switch accounts: back up the existing `storage_state.json`, then `notebooklm login`
 
-#### 6. スキップ（成果物が存在する場合）
+#### 6. Skip behavior (output already exists)
 
-再実行時は、成果物ファイルが既に存在する `content` は常に `skipped` になる。
+On re-run, any `content` whose output file already exists is always `skipped`.
 
-- ファイル名は `<type>_<hash>.<ext>` 形式で自動決定される
-- 同じ URL/type/prompt/options なら同じファイル名になる
-- プロンプトを変えるとファイル名が変わる（別の成果物として扱われる）
+- Filenames are determined as `<type>_<hash>.<ext>`
+- Same URL/type/prompt/options → same filename
+- Changing the prompt produces a different filename (treated as a different output)
 
-#### 7. settings.language（言語設定）
+#### 7. settings.language
 
-`settings.language` はグローバル設定のみ（現行 `run_batch.py` は `contents` 単位での language 上書きは未対応）。
+`settings.language` is a global setting only (per-content language override is not currently supported by `run_batch.py`).
 
-#### 8. 同時実行（複数プロセス）について
+#### 8. Concurrent execution
 
-同一YAMLを **複数プロセスで同時実行しない**（排他制御は未実装）。
+Do **not** run the same YAML with multiple processes simultaneously (no mutual exclusion is implemented).
 
-#### 9. 一時ファイル（ダウンロード中の.tmp）
+#### 9. Temp files (during download)
 
-- 進捗JSONの一時ファイル: `run_*.json.tmp`（atomic更新のため）
-- 成果物の一時ファイル: `<type>_<hash>.<ext>.__tmp__<run_id>`（ダウンロード成功後にrenameで確定）
+- Progress JSON temp file: `run_*.json.tmp` (for atomic update)
+- Output temp file: `<type>_<hash>.<ext>.__tmp__<run_id>` (renamed to final path after successful download)
 
-中断や異常終了で一時ファイルが残ることがある。
-残骸は基本的に安全に削除できる（成果物ファイルではないため）。
+Temp files may remain after interruption or abnormal exit. They are safe to delete (they are not final output files).
 
-#### 10. 終了コード（目安）
+#### 10. Exit codes
 
 - `0`: completed
 - `3`: blocked
-- `130`: aborted（Ctrl+C）
+- `130`: aborted (Ctrl+C)
 
-#### 11. バックグラウンド実行（nohup）
+#### 11. Background execution (nohup)
 
-ターミナルを占有せずにバッチ処理を実行したい場合は `nohup` を使う。
-`settings.notify` と組み合わせることで「投げて放置 → GitHub 通知が来る」UX を実現できる。
+Use `nohup` to run batch processing without occupying the terminal.
+Combine with `settings.notify` for "fire and forget → GitHub notification" UX.
 
 ```bash
 nohup python3 ./run_batch.py ./instructions/<INSTRUCTION>.yaml > log/nohup_output.log 2>&1 &
 ```
 
-- `> log/nohup_output.log 2>&1` — 標準出力・標準エラーをログファイルへリダイレクト
-- 末尾の `&` — シェルをブロックせずバックグラウンドで実行
-- スピナー等のターミナル出力はログファイルに記録される（進捗確認は GitHub Issue 通知を推奨）
+- `> log/nohup_output.log 2>&1` — redirect stdout and stderr to a log file
+- Trailing `&` — run in background without blocking the shell
+- Spinner output is recorded in the log file (use GitHub Issue notifications for progress monitoring)
 
-プロセスの確認・停止:
+Check and stop the process:
 
 ```bash
-# 実行中か確認
-jobs            # 同一シェルセッション内
-ps aux | grep run_batch  # 別ターミナルから
+# Check if running
+jobs            # within the same shell session
+ps aux | grep run_batch  # from another terminal
 
-# 停止したい場合
-kill %1         # jobs で表示されたジョブ番号を指定
-kill <PID>      # ps で表示された PID を指定
+# Stop
+kill %1         # job number from jobs
+kill <PID>      # PID from ps
 ```
 
-> **Note:** `nohup` 実行時はターミナルを閉じてもプロセスは継続する。ただしホストマシン自体をシャットダウンするとプロセスは終了する。
+> **Note:** Closing the terminal does not stop a `nohup` process. Shutting down the host machine does.
 
-# 想定ワークフロー
+# Intended Workflow
 
-1. **ユーザーが「指示書」（YAMLファイル）を作成する**
-   - 処理対象のYouTube URL一覧
-   - 各URLに対する生成コンテンツの種類・オプション・プロンプト
-2. **AIが指示書を読み込み、バッチ処理を自動実行する**
-   - URLごとにNotebookLM上にノートブックを新規作成
-   - YouTubeソースを追加
-   - 指定されたコンテンツを順次生成・保存
-3. **処理完了後、結果を報告する**
-   - 各URLの処理結果（成功/失敗）をサマリ出力
-   - ノートブックは処理完了後に自動削除される（NotebookLM上に残らない）
+1. **User creates an instruction file (YAML)**
+   - List of sources (YouTube URLs, website URLs, etc.)
+   - Per-source content types, options, and prompts
+2. **AI reads the instruction file and runs the batch automatically**
+   - Creates a new notebook on NotebookLM per source
+   - Adds the source
+   - Generates and saves the specified content sequentially
+3. **AI reports results after processing**
+   - Summary of results per source (success/failure)
+   - Notebooks are automatically deleted after processing (nothing remains on NotebookLM)
 
-# 運用仕様（YAML指示書運用）
+# Operational Spec (YAML instruction workflow)
 
-ユーザーは指示書（YAML）を配置して実行を依頼するだけとし、実行・進捗管理・復旧はAI側で完結させる。
+The user only needs to place an instruction YAML and request execution. The AI handles execution, progress management, and recovery.
 
-## ユーザーの責務
+## User responsibilities
 
-- `./instructions/` 配下に指示書（`.yml` / `.yaml`）を配置する
-- 実行を依頼する
-- 初回のみ `notebooklm login` のブラウザ認証が必要
+- Place instruction files (`.yml` / `.yaml`) under `./instructions/`
+- Request execution
+- Complete browser-based `notebooklm login` authentication on first use
 
-## AIの責務
+## AI responsibilities
 
-- 指示書を読み込み、URLごとにノートブック作成→ソース追加→生成→ダウンロード→保存を実行する
-- 実行ログを `./log/` に出力する
-- 長時間処理/異常終了に備え、進捗を永続化し、再起動後に成果物ファイルの存在で自動スキップし未完了分のみ再生成できるようにする
+- Read the instruction file and execute: create notebook → add source → generate → download → save per source
+- Write execution logs to `./log/`
+- Persist progress for long-running jobs and abnormal exits; on restart, auto-skip completed outputs and regenerate only remaining ones
 
-## 実行モデル（逐次）
+## Execution model (sequential)
 
-初期は安定性を優先して逐次実行とする。
+Sequential execution is used for stability.
 
-- `tasks` は上から順に処理する
-- 1つの `task` 内の `contents` も上から順に処理する
+- `tasks` are processed top to bottom
+- `contents` within a task are also processed top to bottom
 
-## 長時間処理と復旧（再起動復帰）
+## Long-running jobs and recovery
 
-ノートブックは処理完了後に自動削除されるため、中断後の復旧は「成果物ファイルの存在」でスキップ判定される。
-再実行時はノートブック作成からやり直しとなるが、既に成果物が存在するContentは自動スキップされる。
+Since notebooks are automatically deleted after processing, recovery after interruption is based on output file existence.
+On re-run, notebook creation starts fresh, but Contents whose outputs already exist are automatically skipped.
 
-> **注意**: YouTubeソースの取り込み（文字起こし）は非常に速い（数秒〜十数秒）ため、再生成のコストは軽微。
+> **Note**: YouTube source ingestion (transcription) is very fast (seconds to tens of seconds), so re-creation overhead is negligible.
 
-### 進捗の永続化（最小要件）
+### Progress persistence (minimum requirements)
 
-1バッチ（= 1指示書の実行）ごとに、進捗を `./log/` 配下に保存する。
+Progress is saved under `./log/` per batch (= per instruction file execution).
 
-- 例: `./log/run_YYYYMMDDHHmmss.json`
-- 各 `contents` 生成ごとに最低限以下を記録する
-  - `video_id`
+- e.g. `./log/run_YYYYMMDDHHmmss.json`
+- At minimum, the following are recorded per content generation:
+  - `source`
   - `notebook_id`
   - `content type`
   - `output_path`
-  - `artifact_id`（取得できる場合）
+  - `artifact_id` (when available)
 
-同一ノートブック内で同一 `type` の生成が複数回走る可能性があるため、復旧・回収は `type` だけで特定せず `artifact_id` を用いる（取得できない場合は再生成する）。
+Since the same type may be generated multiple times within a notebook, recovery uses `artifact_id` rather than `type` alone (regenerate if unavailable).
 
-#### 進捗ファイル例（run_YYYYMMDDHHmmss.json）
+#### Progress file example (run_YYYYMMDDHHmmss.json)
 
 ```json
 {
@@ -881,7 +878,7 @@ kill <PID>      # ps で表示された PID を指定
     {
       "url": "https://www.youtube.com/watch?v=BDl3X9GqhVc",
       "video_id": "BDl3X9GqhVc",
-      "title": "テストニュース",
+      "title": "Test News",
       "notebook_id": "2ae0f4ee-0164-4ad4-b2aa-48ac7986a72b",
       "source_id": "ac317bde-4746-4e70-998f-e05a924a8163",
       "status": "running",
@@ -889,13 +886,13 @@ kill <PID>      # ps で表示された PID を指定
         {
           "content_id": "image_7f3a2c1b",
           "type": "image",
-          "prompt": "全体の要約を視覚的にまとめて",
+          "prompt": "Visually summarize the key points.",
           "options": {
             "orientation": "landscape",
             "detail": "standard"
           },
-          "task_id": "<生成ジョブID（generate 実行時に取得）>",
-          "artifact_id": "<成果物ID（生成完了後に取得）>",
+          "task_id": "<generation job ID (obtained at generate time)>",
+          "artifact_id": "<artifact ID (obtained after generation completes)>",
           "status": "running",
           "output_path": "files/BDl3X9GqhVc/image_7f3a2c1b.png",
           "error": null
@@ -907,138 +904,138 @@ kill <PID>      # ps で表示された PID を指定
 }
 ```
 
-#### error オブジェクト構造（エラー発生時）
+#### Error object structure (on error)
 
 ```json
 {
   "error": {
     "code": "GENERATE_FAILED",
     "at": "2026-02-08T20:15:30+09:00",
-    "stdout": "<CLI の標準出力>",
-    "stderr": "<CLI の標準エラー出力>",
-    "detail": { "<CLI の JSON 出力（あれば）>" }
+    "stdout": "<CLI stdout>",
+    "stderr": "<CLI stderr>",
+    "detail": { "<CLI JSON output if available>" }
   }
 }
 ```
 
-主なエラーコード: `CREATE_FAILED`, `SOURCE_ADD_FAILED`, `SOURCE_WAIT_FAILED`, `SOURCE_NOT_READY`, `GENERATE_FAILED`, `ARTIFACT_WAIT_FAILED`, `ARTIFACT_FAILED`, `ARTIFACT_NOT_FOUND`, `DOWNLOAD_FAILED`, `AUTH_REQUIRED`, `RATE_LIMITED`
+Common error codes: `CREATE_FAILED`, `SOURCE_ADD_FAILED`, `SOURCE_WAIT_FAILED`, `SOURCE_NOT_READY`, `GENERATE_FAILED`, `ARTIFACT_WAIT_FAILED`, `ARTIFACT_FAILED`, `ARTIFACT_NOT_FOUND`, `DOWNLOAD_FAILED`, `AUTH_REQUIRED`, `RATE_LIMITED`
 
-メモ:
+Notes:
 
-- `instruction_file` は canonical path（`realpath` 相当）で保存し、再開時も canonical 同士で比較する
-- `resumed_at` はリジューム実行時にのみ設定される
-- `task_id` は `generate` 実行時に取得できる場合のみ保存する
-- `artifact_id` は生成完了後に取得できる場合のみ保存する（取得できない場合は再生成する）
-- `content_id` は内部用識別子（`type_<hash>` 形式で自動決定）
+- `instruction_file` is stored and compared as a canonical path (equivalent to `realpath`)
+- `resumed_at` is set only on resume runs
+- `task_id` is stored only when available from `generate`
+- `artifact_id` is stored only when available after generation (regenerate if unavailable)
+- `content_id` is an internal identifier (auto-determined as `type_<hash>`)
 
-### ステータス確認（ポーリング/待機）
+### Status polling / waiting
 
-- ソース取り込みの完了待ち:
+- Wait for source ingestion to complete:
   - `notebooklm source wait <SOURCE_ID> --timeout <sec> [--json]`
-- 生成ジョブの状況確認:
+- Check generation job status:
   - `notebooklm artifact poll <TASK_ID> -n <NOTEBOOK_ID>`
-  - メモ: `artifact poll` は `--json` をサポートしない前提で扱う
-  - `TASK_ID` が手元にない場合は、`artifact_id` が確定してから `artifact wait --json` を使う（`run_batch.py` は `artifact_id` を進捗に保存する方針）
-- 生成完了待ち（ブロッキング）:
+  - Note: `artifact poll` does not support `--json`
+  - If `TASK_ID` is unavailable, use `artifact wait --json` after `artifact_id` is confirmed (`run_batch.py` saves `artifact_id` to progress)
+- Wait for generation to complete (blocking):
   - `notebooklm artifact wait <ARTIFACT_ID> -n <NOTEBOOK_ID> --timeout <sec> --interval <sec> [--json]`
-  - `run_batch.py` はデフォルトで `--timeout 86400 --interval 5` を使用（24時間タイムアウト、実質無制限）
+  - `run_batch.py` defaults to `--timeout 86400 --interval 5` (24-hour timeout, effectively unlimited)
 
-生成（`generate`）は `--json` を使って機械可読な出力を記録し、`artifact_id` 等の識別子を確実に保存できるようにする。
+Use `--json` with `generate` to get machine-readable output and reliably capture identifiers such as `artifact_id`.
 
-## クリーンアップ（ノートブック削除）
+## Cleanup (notebook deletion)
 
-**アグレッシブ削除方針**: ノートブックは処理完了後（成功/失敗/中断問わず）に自動削除される。
-そのため、通常運用では手動でのノートブック削除は不要。
+**Aggressive deletion policy**: notebooks are automatically deleted after processing (success/failure/interruption).
+Manual notebook deletion is not normally required.
 
-何らかの理由でノートブックが残った場合は、Web UI から削除するか、CLIで削除できる。
+If a notebook remains for any reason, delete it from the Web UI or via CLI:
 
-- 例: `notebooklm delete -n <NOTEBOOK_ID> -y`（部分ID指定が可能）
+- e.g. `notebooklm delete -n <NOTEBOOK_ID> -y` (partial ID is accepted)
 
-# notebooklm-py 使用ガイド
+# notebooklm-py Usage Guide
 
-YouTube動画からPodcast、画像、スライド、動画を自動生成するためのガイド。
+Guide for automatically generating podcasts, images, slides, and videos from YouTube videos.
 
-## 環境セットアップ（pipx使用）
+## Environment Setup (using pipx)
 
-### 初回セットアップ（一度だけ）
+### Initial setup (once only)
 
 ```bash
-# pipx で一時的にインストールして認証を実行
+# Install via pipx
 pipx install "notebooklm-py[browser]"
 
-# Playwright の Chromium をインストール（pipx 仮想環境内の Python から実行）
+# Install Playwright's Chromium (run from within the pipx virtual environment)
 ~/.local/share/pipx/venvs/notebooklm-py/bin/python -m playwright install chromium
 
-# 初回認証
+# Initial authentication
 notebooklm login
-# → ブラウザが開くのでGoogleログイン → ENTERで保存
+# → Browser opens for Google login → press ENTER to save
 
-# 確認
+# Verify
 notebooklm --version
 ```
 
-認証情報は `~/.notebooklm/storage_state.json` に保存されます。
+Credentials are saved to `~/.notebooklm/storage_state.json`.
 
 ## Tips
 
-- 別アカウントで試したい場合は `~/.notebooklm/storage_state.json` を退避してから `notebooklm login` をやり直す
-- Notebookタイトルが `-` で始まる場合、CLIがオプションとして解釈するため `--` を挟む（例: `notebooklm create --json -- "-LpMZyDZI8k"`）
-- Infographic（image）の処理は数分かかることがある（Source追加後の待機 + 生成〜ダウンロードで数分）
-- 生成は `RATE_LIMITED`（Google側のレート制限）になることがある。回復が難しい場合は、別アカウントでの再ログインを検討する
-- PoCを複数回回すと NotebookLM 上にノートブックが多数作成される。不要になったものは `notebooklm delete -n <NOTEBOOK_ID> -y` で削除可能
+- To try a different account, back up `~/.notebooklm/storage_state.json` and re-run `notebooklm login`
+- If a notebook title starts with `-`, the CLI interprets it as an option — use `--` to separate it (e.g. `notebooklm create --json -- "-LpMZyDZI8k"`)
+- Infographic (image) generation can take several minutes (source ingestion wait + generation and download)
+- Generation may hit `RATE_LIMITED` (Google-side rate limiting). If recovery is difficult, consider re-logging in with a different account
+- Running multiple test cycles can accumulate notebooks on NotebookLM; delete unneeded ones with `notebooklm delete -n <NOTEBOOK_ID> -y`
 
 ---
 
-# 開発履歴
+# Development History
 
 ## 2026-02-12
 
-### GitHub Issue 通知機能
+### GitHub Issue Notification Feature
 
-**背景**: バッチ処理が長時間かかり（画像3分、スライド6分、Podcast/動画10分超）、ターミナルがロックされるUX課題があった
+**Background**: Batch processing takes a long time (image ~3 min, slide ~6 min, podcast/video 10+ min), blocking the terminal UX.
 
-**実装内容**:
-- `settings.notify` オプションを追加（`github_issue`, `github_repo`）
-- バッチ処理の各ステップで GitHub Issue にコメントを投稿し、進捗を通知
-- 通知は best-effort（失敗してもバッチ処理に影響しない）
-- `nohup` と組み合わせて「投げて放置 → 通知が来る」UX を実現
+**Implementation**:
+- Added `settings.notify` option (`github_issue`, `github_repo`)
+- Posts GitHub Issue comments at each batch step to notify progress
+- Notifications are best-effort (failures do not affect batch processing)
+- Combines with `nohup` for "fire and forget → notification arrives" UX
 
-**通知ポイント**: 開始、スキップ、コンテンツ完了、RATE_LIMITED、AUTH_REQUIRED、エラー、全体完了、中断
+**Notification events**: start, skip, content complete, RATE_LIMITED, AUTH_REQUIRED, error, batch complete, interrupted
 
-### Issue #2: 出力ディレクトリ名のカスタマイズ機能
+### Issue #2: Output directory name customization
 
-**背景**: 出力先ディレクトリが `video_id` 固定で可読性が低かった
+**Background**: Output directories were fixed to `video_id`, which was hard to read.
 
-**実装内容**:
-- `settings.output_dir_mode` オプションを追加
-- 3つのモードをサポート:
-  - `video_id`: video_id のみ（デフォルト、後方互換）
-  - `title`: タイトルのみ（可読性重視）
-  - `title_with_video_id`: タイトル＋video_id（推奨）
-- `slugify()` 関数でファイルシステム安全な文字列に変換
-- Windows予約名、危険文字、長さ制限に対応
+**Implementation**:
+- Added `settings.output_dir_mode` option
+- Three modes:
+  - `video_id`: video_id only (default, backward compatible)
+  - `title`: title only (readability focused)
+  - `title_with_video_id`: title + video_id (recommended)
+- `slugify()` function converts to filesystem-safe strings
+- Handles Windows reserved names, unsafe characters, and length limits
 
-**出力例**:
+**Output examples**:
 ```
-video_id:           files/dQw4w9WgXcQ/
-title:              files/Rick_Astley_-_Never_Gonna_Give_You_Up/
-title_with_video_id: files/Rick_Astley_-_Never_Gonna_Give_You_Up__dQw4w9WgXcQ/
+video_id:              files/dQw4w9WgXcQ/
+title:                 files/Rick_Astley_-_Never_Gonna_Give_You_Up/
+title_with_video_id:   files/Rick_Astley_-_Never_Gonna_Give_You_Up__dQw4w9WgXcQ/
 ```
 
-### Issue #1: アグレッシブ削除方針の採用
+### Issue #1: Aggressive deletion policy
 
-**背景**: 出力ファイルが既に存在する場合でも、NotebookLM上にノートブックとソースが作成され、テスト実行で大量の重複ノートブックが蓄積していた
+**Background**: Even when output files already existed, notebooks and sources were created on NotebookLM, causing large numbers of duplicate notebooks to accumulate during test runs.
 
-**検討結果**:
-- 選択肢A（ノートを残して再利用）: 状態管理が複雑
-- 選択肢B（生成→DL→削除）: 実装シンプル、重複問題が消える → **採用**
+**Decision**:
+- Option A (keep notebooks and reuse): complex state management
+- Option B (generate → download → delete): simple implementation, eliminates duplication problem → **adopted**
 
-**実装内容**:
-- タスク完了/失敗/中断のいずれでも、ノートブックを自動削除
-- 全成果物が既に存在する場合、ノートブック作成自体をスキップ
-- 「成果物ファイルが正」の原則を徹底（NotebookLM側の状態に依存しない）
-- try/finally パターンで削除漏れを防止
+**Implementation**:
+- Notebooks are automatically deleted on task completion/failure/interruption
+- If all outputs already exist, skip notebook creation entirely
+- Enforce "output files are the source of truth" principle (no dependency on NotebookLM server state)
+- `try/finally` pattern prevents deletion leaks
 
-**許容したトレードオフ**:
-- NotebookLM Web UIでの確認不可 → 不要と判断
-- 再生成時に毎回ノート作成から → ソース追加が速い（数秒〜十数秒）ので許容
+**Accepted trade-offs**:
+- Cannot inspect results in NotebookLM Web UI → deemed unnecessary
+- Notebook creation on every regeneration → source addition is fast (seconds to tens of seconds), so acceptable

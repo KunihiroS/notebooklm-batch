@@ -30,6 +30,15 @@ Install the Playwright browser (Chromium) for browser automation:
 pipx run --spec "notebooklm-py[browser]" python -m playwright install chromium
 ```
 
+> **Why pipx instead of pip?**
+> `pipx` installs CLI tools in isolated virtual environments, preventing dependency conflicts with your other Python projects. It is the recommended way to install `notebooklm-py`.
+>
+> If you prefer not to use pipx, a plain `pip install` also works:
+> ```bash
+> pip install "notebooklm-py[browser]"
+> python -m playwright install chromium
+> ```
+
 ## Step 4: Authenticate with NotebookLM
 
 ```bash

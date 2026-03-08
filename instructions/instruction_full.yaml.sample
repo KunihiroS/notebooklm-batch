@@ -3,7 +3,7 @@
 # Save as .yaml/.yml under instructions/ and pass it to run_batch.py.
 
 settings:
-  language: ja
+  language: en
   notify:
     github_issue: 1
     # github_repo: "your-account/notebooklm-batch"
@@ -13,7 +13,7 @@ tasks:
     title: "AI News Weekly"
     contents:
       - type: podcast
-        prompt: "日本語で、前半は全体像、後半は論点ごとの深掘りという構成で、親しみやすいトーンのポッドキャストにしてください。"
+        prompt: "Create an engaging podcast covering the overall picture in the first half and diving into individual topics in the second half."
         options:
           format: deep-dive
           length: long
@@ -21,7 +21,7 @@ tasks:
         # length: short | default | long
 
       - type: image
-        prompt: "動画の内容を一枚で理解できるインフォグラフィックを作成してください。主要トピック3点を視覚的に整理し、本文は日本語で簡潔にしてください。"
+        prompt: "Create an infographic that captures the key points of the video at a glance. Highlight 3 main topics visually with concise captions."
         options:
           orientation: landscape
           detail: detailed
@@ -29,7 +29,7 @@ tasks:
         # detail: concise | standard | detailed
 
       - type: slide
-        prompt: "社内共有向けのスライド資料として、要点と示唆が一目でわかる構成にしてください。"
+        prompt: "Organize the key points and insights into a slide deck suitable for internal sharing."
         options:
           format: presenter
           length: default
@@ -37,7 +37,7 @@ tasks:
         # length: default | short
 
       - type: video
-        prompt: "初心者向けの解説動画として、専門用語には短い補足を入れながらわかりやすく構成してください。"
+        prompt: "Structure the content as an explainer video for beginners, adding brief clarifications for technical terms."
         options:
           format: explainer
           style: whiteboard
@@ -45,13 +45,13 @@ tasks:
         # style: auto-select | classic | whiteboard | kawaii | anime | watercolor | retro-print | heritage | paper-craft
 
       - type: report
-        prompt: "動画の要点を日本語でブリーフィングドキュメントとしてまとめてください。"
+        prompt: "Summarize the key points of the video as a briefing document."
         options:
           format: briefing-doc
         # format: briefing-doc | faq | study-guide | timeline | ...
 
       - type: quiz
-        prompt: "動画の重要概念を確認するクイズを日本語で作成してください。"
+        prompt: "Create a quiz to check understanding of the key concepts covered in the video."
         options:
           quantity: standard
           difficulty: medium
@@ -59,24 +59,24 @@ tasks:
         # difficulty: easy | medium | hard
 
       - type: flashcards
-        prompt: "動画の重要用語と概念をフラッシュカード化してください。"
+        prompt: "Turn the important terms and concepts from the video into flashcards."
         options:
           quantity: standard
           difficulty: medium
 
       - type: data-table
-        prompt: "動画で言及された製品・サービス・数値を一覧表にまとめてください。"
+        prompt: "List the products, services, and figures mentioned in the video in a table."
 
   - source: "https://example.com/article"
-    title: "Web記事まとめ"
+    title: "Web Article Summary"
     contents:
       - type: report
-        prompt: "記事の要点を日本語でまとめてください。"
+        prompt: "Summarize the key points of the article."
         options:
           format: briefing-doc
 
       - type: podcast
-        prompt: "批評的な観点を含めて、日本語で短めに要約してください。"
+        prompt: "Summarize briefly including a critical perspective."
         options:
           format: critique
           length: short

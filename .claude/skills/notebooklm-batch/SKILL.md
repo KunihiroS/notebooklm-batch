@@ -9,122 +9,121 @@ description: >
   "generate a podcast from this video", "summarize this article as a report",
   or any request that combines a URL/video with content generation.
   Also trigger when the user asks to batch-process multiple sources at once.
-allowed-tools: Bash, Read, Write, Glob
 ---
 
-# notebooklm-batch コンテンツ生成
+# notebooklm-batch Content Generation
 
-notebooklm-batch は YouTube 動画や Web サイトから NotebookLM を使って
-コンテンツ（Podcast・スライド・レポート等）をバッチ生成するツール。
-YAML 指示書を作成して `run_batch.py` に渡すことで自動生成する。
+notebooklm-batch is a tool that uses NotebookLM to batch-generate content
+(podcasts, slides, reports, etc.) from YouTube videos and websites.
+Create a YAML instruction file and pass it to `run_batch.py` for automated generation.
 
-詳細仕様: `README.md`（YAML スキーマ・オプション一覧）、`AGENTS.md`（認証・エラー対応）
+Full spec: `README.md` (YAML schema and option values), `AGENTS.md` (authentication and error handling)
 
-## Step 0: 作業ディレクトリ確定
+## Step 0: Confirm working directory
 
-すべてのコマンドを実行する前に、リポジトリルートへ移動する。
+Before running any commands, change to the repository root:
 
 ```bash
 cd $(git rev-parse --show-toplevel)
 ```
 
-これによりハードコードされたパスを使わずにどこからでも動作する。
+This ensures correct paths regardless of where you invoke the skill from.
 
-## Step 1: 認証確認
+## Step 1: Check authentication
 
 ```bash
 ls ~/.notebooklm/storage_state.json
 ```
 
-ファイルが存在しない場合は処理を止め、ユーザーに以下を依頼する:
+If the file does not exist, stop and ask the user to:
 
-1. `notebooklm login` を実行
-2. ブラウザで Google アカウントにログイン
-3. **ログイン完了後、ターミナルに戻って ENTER を押すまでブラウザを閉じない**（ブラウザを先に閉じると `storage_state.json` の保存が失敗する）
+1. Run `notebooklm login`
+2. Log in to their Google account in the browser
+3. **Return to the terminal and press ENTER after login completes — do not close the browser first** (closing before pressing ENTER causes `storage_state.json` to fail to save)
 
-## Step 2: パラメータ収集
+## Step 2: Gather parameters
 
-会話のコンテキストからできるだけ読み取る。不明な項目のみ確認する。
+Read as much as possible from the conversation context. Only ask about items that are unclear.
 
-| 項目 | 必須 | 備考 |
-|------|------|------|
-| **source** | ✅ | YouTube URL / Website URL / ファイルパス |
-| **title** | ✅（YouTube 以外） | YouTube は省略可（video_id にフォールバック） |
-| **コンテンツ種類** | ✅ | 下表参照 |
-| **prompt** | 推奨 | 省略可だが、指示なしだと汎用的な内容になる。確認推奨 |
-| **options** | 任意 | 省略時は AGENTS.md のデフォルト値が適用される |
+| Item | Required | Notes |
+|------|----------|-------|
+| **source** | ✅ | YouTube URL / Website URL / file path |
+| **title** | ✅ (non-YouTube) | YouTube sources may omit (falls back to `video_id`) |
+| **content type** | ✅ | See table below |
+| **prompt** | Recommended | Optional, but generic without one — confirm if not provided |
+| **options** | Optional | Defaults from AGENTS.md apply when omitted |
 
-### 対応コンテンツ種類
+### Supported content types
 
-| type | 説明 | 主なオプション |
-|------|------|----------------|
-| `podcast` | 音声Podcast | `format`: deep-dive/brief/critique/debate, `length`: short/default/long |
-| `slide` | スライドデッキ（PDF） | `format`: detailed/presenter, `length`: default/short |
-| `image` | インフォグラフィック | `orientation`: landscape/portrait/square, `detail`: concise/standard/detailed |
-| `video` | 動画 | `format`: explainer/brief, `style`: whiteboard/kawaii/anime 等 |
-| `report` | レポート（Markdown） | `format`: briefing-doc/faq/study-guide/timeline 等 |
-| `quiz` | クイズ（JSON） | `quantity`: standard/more/fewer, `difficulty`: easy/medium/hard |
-| `flashcards` | フラッシュカード（JSON） | `quantity`: standard/more/fewer, `difficulty`: easy/medium/hard |
-| `data-table` | データテーブル（CSV） | *(prompt 必須、options なし)* |
+| type | Description | Key options |
+|------|-------------|-------------|
+| `podcast` | Audio podcast | `format`: deep-dive/brief/critique/debate, `length`: short/default/long |
+| `slide` | Slide deck (PDF) | `format`: detailed/presenter, `length`: default/short |
+| `image` | Infographic (PNG) | `orientation`: landscape/portrait/square, `detail`: concise/standard/detailed |
+| `video` | Explainer video (MP4) | `format`: explainer/brief, `style`: whiteboard/kawaii/anime etc. |
+| `report` | Report (Markdown) | `format`: briefing-doc/faq/study-guide/timeline etc. |
+| `quiz` | Quiz (JSON) | `quantity`: standard/more/fewer, `difficulty`: easy/medium/hard |
+| `flashcards` | Flashcards (JSON) | `quantity`: standard/more/fewer, `difficulty`: easy/medium/hard |
+| `data-table` | Data table (CSV) | *(prompt required, no options)* |
 
-## Step 3: YAML 指示書の作成
+## Step 3: Create YAML instruction file
 
-`./instructions/` ディレクトリに YAML ファイルを作成する。
+Create a YAML file in `./instructions/`.
 
-ファイル名: `{safe_title}_{YYYYMMDD}.yaml`（例: `ai_news_20240308.yaml`）
+File name: `{safe_title}_{YYYYMMDD}.yaml` (e.g., `ai_news_20240308.yaml`)
 
 ```yaml
 settings:
-  language: ja          # ja または en
+  language: ja          # ja or en
 
 tasks:
-  - source: "<YouTube URL / Website URL / ファイルパス>"
-    title: "<タイトル>"   # YouTube のみ省略可
+  - source: "<YouTube URL / Website URL / file path>"
+    title: "<title>"    # optional for YouTube only
     contents:
       - type: <TYPE>
-        prompt: "<生成時の指示>"
-        # options:       # 任意。省略時はデフォルト値が適用
+        prompt: "<generation instructions>"
+        # options:       # optional; defaults apply when omitted
         #   key: value
 ```
 
-複数のコンテンツ種類を同時生成する場合は `contents` にエントリを追加する。
-複数のソースを処理する場合は `tasks` にエントリを追加する。
+Add entries to `contents` to generate multiple content types from one source.
+Add entries to `tasks` to process multiple sources.
 
-## Step 4: ドライラン確認
+## Step 4: Dry-run verification
 
-実際の生成を行わず、処理対象と出力パスを確認する。
+Verify targets and output paths without actually generating anything:
 
 ```bash
 python3 ./run_batch.py ./instructions/<FILE>.yaml --dry-run
 ```
 
-出力をユーザーに提示し、意図通りかを確認する。問題があれば YAML を修正して再度ドライランする。
+Show the output to the user and confirm it matches their intent. Fix the YAML and re-run dry-run if needed.
 
-## Step 5: バックグラウンド実行
+## Step 5: Background execution
 
-生成には数分〜十数分かかるため、バックグラウンド実行がデフォルト。
+Generation takes several minutes to tens of minutes — background execution is the default:
 
 ```bash
 nohup python3 ./run_batch.py ./instructions/<FILE>.yaml > log/nohup_output.log 2>&1 &
 echo "PID: $!"
 ```
 
-### 実行後にユーザーへ報告する情報
+### Report to the user after starting
 
-- **PID**: バックグラウンドプロセスの番号
-- **成果物パス**: `./files/<safe_title>__<source_hash>/`（ドライラン出力に表示される）
-- **ログ監視**: `tail -f log/nohup_output.log`
-- **再開方法**: 中断しても同じ YAML で再実行すれば自動リジューム
+- **PID**: Background process ID
+- **Output path**: `./files/<safe_title>__<source_hash>/` (shown in dry-run output)
+- **Monitor logs**: `tail -f log/nohup_output.log`
+- **Resume**: Re-running the same YAML auto-resumes from where it stopped
 
-## エラー対応
+## Error Handling
 
-| エラー | 意味 | 対応 |
-|--------|------|------|
-| `AUTH_REQUIRED` | 認証切れ | `notebooklm login` を再実行 → 同じ YAML で再実行 |
-| `RATE_LIMITED` | レート制限 | 時間をおいて再実行（バッチ全体が停止する） |
-| その他 | タスクエラー | そのタスクをスキップして続行（正常動作） |
+| Error | Meaning | Action |
+|-------|---------|--------|
+| `AUTH_REQUIRED` | Session expired | Re-run `notebooklm login` → re-run same YAML |
+| `RATE_LIMITED` | Rate limit hit | Wait and retry (stops entire batch) |
+| Other | Task-level error | That task is skipped; batch continues (normal behavior) |
 
-AUTH_REQUIRED / RATE_LIMITED は **バッチ全体が停止**する fatal エラー。
-その他のエラーはタスク単位でスキップされ、バッチは続行する。
+`AUTH_REQUIRED` / `RATE_LIMITED` are **fatal errors that stop the entire batch**.
+Other errors skip the individual task and the batch continues.
 
-詳細は `AGENTS.md` の「エラー対応」セクション参照。
+See the "Error Handling" section in `AGENTS.md` for details.
