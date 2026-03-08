@@ -970,8 +970,8 @@ Guide for automatically generating podcasts, images, slides, and videos from You
 # Install via pipx
 pipx install "notebooklm-py[browser]"
 
-# Install Playwright's Chromium (run from within the pipx virtual environment)
-~/.local/share/pipx/venvs/notebooklm-py/bin/python -m playwright install chromium
+# Install Playwright's Chromium
+pipx run --spec "notebooklm-py[browser]" python -m playwright install chromium
 
 # Initial authentication
 notebooklm login
