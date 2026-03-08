@@ -67,7 +67,7 @@ notebooklm login
 
 ## Quick Start
 
-> **Prerequisites**: Complete installation and authentication first — see [INSTALL.md](INSTALL.md).
+> **Prerequisites**: Complete installation and authentication first, you need some works at the first time such as NotebookLM login and some more. — check otu the details in [INSTALL.md](INSTALL.md).
 
 1. Create a YAML instruction file in `instructions/`:
 
